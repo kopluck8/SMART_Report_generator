@@ -265,12 +265,12 @@
   const TEXT_KEYS = ["nomor_st", "judul", "judul_lengkap", "lokasi", "periode", "tanggal_mulai", "tanggal_selesai", "tanggal_st", "jumlah_hari", "jarak_km", "jumlah_temuan", "jumlah_titik", "jumlah_anggota", "ketua_tim", "nip_ketua", "daftar_anggota", "grid", "resor", "anggaran", "sumber_anggaran", "tanggal_laporan", "kota", "latar", "maksud", "ruanglingkup", "hasil", "pembahasan", "kesimpulan", "saran"];
   function textFields(M, notes, I) {
     if (!M || !I) return Object.fromEntries(TEXT_KEYS.map((k) => [k, ""]));
-    const p = M.patrol, t = M.totals, R = window.SRGReport;
+    const t = M.totals, R = window.SRGReport;
     return {
-      nomor_st: p.id, judul: I.judul, judul_lengkap: I.judulLengkap, lokasi: I.lokasi, periode: R.periodeSd(p.startDate, p.endDate),
-      tanggal_mulai: R.tglPanjang(p.startDate), tanggal_selesai: R.tglPanjang(p.endDate), tanggal_st: I.tanggalST ? R.tglPanjang(I.tanggalST) : "",
-      jumlah_hari: String(t.days), jarak_km: R.num(t.distance / 1000, 1), jumlah_temuan: String(t.obs), jumlah_titik: String(t.wps), jumlah_anggota: String(M.members.length),
-      ketua_tim: M.leader ? M.leader.name : "", nip_ketua: M.leader ? R.fmtNip(M.leader.employeeId) : "",
+      nomor_st: I.nomorST, judul: I.judul, judul_lengkap: I.judulLengkap, lokasi: I.lokasi, periode: R.periodeSd(I.mulai, I.selesai),
+      tanggal_mulai: R.tglPanjang(I.mulai), tanggal_selesai: R.tglPanjang(I.selesai), tanggal_st: I.tanggalST ? R.tglPanjang(I.tanggalST) : "",
+      jumlah_hari: String(I.hari), jarak_km: R.num(t.distance / 1000, 1), jumlah_temuan: String(t.obs), jumlah_titik: String(t.wps), jumlah_anggota: String(M.members.length),
+      ketua_tim: M.leader ? M.leader.name : "", nip_ketua: M.leader ? R.fmtNip(M.leader.nip) : "",
       daftar_anggota: M.members.map((m, i) => `${i + 1}. ${m.name}`).join("\n"), grid: I.grids, resor: I.resort, anggaran: I.anggaran, sumber_anggaran: I.sumberAnggaran,
       tanggal_laporan: R.tglPanjang(I.tanggalLaporan), kota: I.kota,
       latar: notes.latar, maksud: notes.maksud, ruanglingkup: notes.ruanglingkup, hasil: notes.hasil, pembahasan: notes.pembahasan, kesimpulan: notes.kesimpulan, saran: notes.saran

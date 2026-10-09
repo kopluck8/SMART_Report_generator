@@ -101,11 +101,10 @@
   function buildModel(patrol, dicts, settings, layers) {
     const L = makeLabeler(dicts);
     const isSpeciesAttr = (k) => /^(jenis(satwa|tumbuhan|biota)|spesies|species)/i.test(k);
+    // Daftar pegawai berurutan sesuai kepangkatan; anggota di luar daftar diisi manual (key = ID SMART)
     const directory = new Map();
-    for (const l of lines(settings.personil)) {
-      const [nip, nama, jabatan] = l.split(/[;\t]/).map((s) => (s || "").trim());
-      if (nip && /\d{6,}/.test(nip.replace(/\s/g, ""))) directory.set(nip.replace(/\D/g, ""), { nama, jabatan });
-    }
+    (settings.pegawai || []).forEach((pg, i) => { const k = String(pg.nip || "").replace(/\D/g, ""); if (k && !directory.has(k)) directory.set(k, { ...pg, rank: i }); });
+    const manual = settings.manualPegawai || {};
 
     const members = [], seen = new Set();
     patrol.legs.forEach((lg) => lg.members.forEach((m) => {
@@ -113,10 +112,15 @@
       if (seen.has(k)) return;
       seen.add(k);
       const smartName = m.givenName === m.familyName || !m.familyName ? m.givenName : `${m.givenName} ${m.familyName}`;
-      const dir = directory.get(String(m.employeeId).replace(/\D/g, "")) || {};
-      members.push({ ...m, smartName, name: dir.nama || smartName, jabatan: dir.jabatan || "", inDirectory: !!dir.nama });
+      const id = String(m.employeeId || "").replace(/\D/g, "");
+      const dir = directory.get(id), man = manual[m.employeeId] || {};
+      members.push({
+        ...m, smartName, name: (dir && dir.nama) || man.nama || smartName, nip: (dir && dir.nip) || man.nip || m.employeeId,
+        jabatan: (dir && dir.jabatan) || man.jabatan || "", pangkat: (dir && dir.pangkat) || man.pangkat || "",
+        inDirectory: !!dir, manualOk: !!(man.nama && man.jabatan), rank: dir ? dir.rank : 1e6 + members.length
+      });
     }));
-    members.sort((a, b) => b.isLeader - a.isLeader);
+    members.sort((a, b) => a.rank - b.rank);
     const leader = members.find((m) => m.isLeader);
 
     const gridLayer = layers.find((l) => l.role === "grid"), zonaLayer = layers.find((l) => l.role === "zonasi"), resortLayer = layers.find((l) => l.role === "resort");
@@ -211,7 +215,10 @@
   function deriveInfo(M, info, profile) {
     const p = M.patrol;
     const sumberAttr = (p.attributes || []).find((a) => a.key === "sumberanggaran");
-    const year = (p.startDate || "").substr(0, 4);
+    const mulai = info.tglMulai || p.startDate, selesai = info.tglSelesai && info.tglSelesai >= mulai ? info.tglSelesai : (info.tglMulai && info.tglMulai > p.endDate ? info.tglMulai : p.endDate);
+    const year = (mulai || "").substr(0, 4);
+    const dipa = (window.SRG_DIPA || {})[year] || {};
+    const looksST = /^ST\.|\/T\.\d+\//i.test(p.id || "");
     const judul = info.judul || p.mandate || "SMART Patrol";
     const lokasi = info.lokasi || p.station || "";
     const grids = info.grids || (M.grids.length ? M.grids.join(", ") : "");
@@ -220,9 +227,10 @@
       judul, lokasi, judulLengkap: `${judul} di Wilayah Kerja ${lokasi}`, grids,
       gridText: grids ? `Grid ${grids.replace(/,\s*([^,]+)$/, ", dan $1")}` : "",
       resort: info.resort || M.resorts.join(", "),
-      sumberAnggaran: info.sumberAnggaran || (sumberAttr ? (M.labeler.find(sumberAttr.value) || sumberAttr.value) + (year ? ` TA.${year}` : "") : ""),
-      anggaran: rupiah(info.anggaran), tanggalST: info.tanggalST || "", nomorDipa: info.nomorDipa || "", tanggalDipa: info.tanggalDipa || "",
-      tanggalLaporan: info.tanggalLaporan || addDays(p.endDate, 3), kota: info.tempatTtd || profile.kota || "", penyusun,
+      sumberAnggaran: dipa.sumber || (sumberAttr ? (M.labeler.find(sumberAttr.value) || sumberAttr.value) + (year ? ` TA.${year}` : "") : ""),
+      anggaran: rupiah(info.anggaran), tanggalST: info.tanggalST || "", nomorDipa: dipa.nomor || "", tanggalDipa: dipa.tanggal || "",
+      nomorST: (info.nomorST || "").trim() || (looksST ? p.id : ""), mulai, selesai, hari: Math.round((parseISO(selesai) - parseISO(mulai)) / 864e5) + 1,
+      tanggalLaporan: info.tanggalLaporan || addDays(selesai, 3), kota: info.tempatTtd || profile.kota || "", penyusun,
       rencanaHari: Math.max(0, Number(info.rencanaHari ?? 1)), year
     };
   }
@@ -236,7 +244,7 @@
       latar: [
         "Taman Nasional Tambora merupakan kawasan konservasi yang ditetapkan untuk melindungi keunikan ekosistem pasca letusan tahun 1815, melalui Keputusan Menteri Lingkungan Hidup dan Kehutanan No. SK. 111/Menlhk-II/2015 dengan luas 71.645,64 hektar. Kawasan ini dikelola oleh Balai Taman Nasional Tambora untuk mempertahankan nilai-nilai konservasi sumber daya alam hayati dan ekosistemnya.",
         `Pengelolaan kawasan dibagi ke dalam beberapa wilayah kerja, salah satunya ${I.lokasi}. Tekanan terhadap kawasan, seperti perambahan, pembalakan liar, perburuan satwa, dan kebakaran hutan dan lahan, menuntut pola pengamanan yang berbasis data dan teknologi.`,
-        `Oleh karena itu, dilaksanakan kegiatan ${I.judulLengkap} pada tanggal ${periode(p.startDate, p.endDate)}${where}. Dengan metode Spatial Monitoring and Reporting Tool (SMART), setiap temuan di lapangan dapat terdeteksi secara dini, terdokumentasi secara akurat, dan ditindaklanjuti secara cepat.`
+        `Oleh karena itu, dilaksanakan kegiatan ${I.judulLengkap} pada tanggal ${periode(I.mulai, I.selesai)}${where}. Dengan metode Spatial Monitoring and Reporting Tool (SMART), setiap temuan di lapangan dapat terdeteksi secara dini, terdokumentasi secara akurat, dan ditindaklanjuti secara cepat.`
       ].join("\n"),
       maksud: [
         `Kegiatan ${I.judulLengkap} dimaksudkan sebagai upaya pengamanan dan pemantauan kawasan Taman Nasional Tambora secara terukur dan berbasis data${where ? `, khususnya pada ${I.gridText}` : ""}.`,
@@ -253,7 +261,7 @@
         "3. Memberikan himbauan kepada masyarakat yang ditemukan beraktivitas di dalam kawasan;",
         "4. Melakukan input data lapangan menggunakan aplikasi SMART Mobile, termasuk titik koordinat dan dokumentasi visual temuan."
       ].join("\n"),
-      waktu: `Kegiatan ${I.judulLengkap} ini dilaksanakan selama ${t.days} (${terbilang(t.days)}) hari terhitung mulai tanggal ${periode(p.startDate, p.endDate)}${I.gridText ? ` yang meliputi ${I.gridText}` : ""}. Total lintasan patroli yang terekam sepanjang ±${num(t.distance / 1000, 1)} km.`,
+      waktu: `Kegiatan ${I.judulLengkap} ini dilaksanakan selama ${I.hari} (${terbilang(I.hari)}) hari terhitung mulai tanggal ${periode(I.mulai, I.selesai)}${I.gridText ? ` yang meliputi ${I.gridText}` : ""}. Data patroli SMART terekam pada ${t.days} hari pengambilan data dengan total lintasan sepanjang ±${num(t.distance / 1000, 1)} km.`,
       hasil: `Dalam pelaksanaan kegiatan ${I.judulLengkap} didapat hasil berupa temuan terkait ${M.groups.map((x) => x.label).join(", ").replace(/, ([^,]+)$/, ", dan $1")} sebanyak ${t.obs} temuan pada ${t.wps} titik${I.gridText ? ` di ${I.gridText}` : ""}${I.resort ? ` wilayah Resor ${I.resort}` : ""}.`,
       pembahasan: "",
       kesimpulan: "",
@@ -280,7 +288,7 @@
     if (inv) sar.push(`Melakukan pemantauan dan pengendalian spesies invasif (${inv.species.slice(0, 3).map((s) => s.name).join(", ")}) di lokasi temuan.`);
     const gc = g("groundcheck");
     if (gc) pem.push(`Hasil ground check pada ${gc.items.length} titik memberikan data kondisi tipe ekosistem dan tutupan lahan aktual sebagai baseline pemantauan kawasan.`);
-    pem.push(`Tim menempuh lintasan sepanjang ±${num(t.distance / 1000, 1)} km selama ${t.days} hari dengan moda ${[...new Set(M.days.map((d) => d.transport).filter(Boolean))].join(", ") || "jalan kaki"}.`);
+    pem.push(`Tim menempuh lintasan sepanjang ±${num(t.distance / 1000, 1)} km pada ${t.days} hari pengambilan data dengan moda ${[...new Set(M.days.map((d) => d.transport).filter(Boolean))].join(", ") || "jalan kaki"}.`);
     sar.push("Melanjutkan patroli rutin pada jalur dan grid yang sama untuk pemantauan berkala.");
     notes.pembahasan = pem.map((x, i) => `${i + 1}. ${x}`).join("\n");
     notes.kesimpulan = `Berdasarkan seluruh rangkaian kegiatan ${I.judulLengkap} yang dilaksanakan, dapat disimpulkan bahwa: ` + kes.join(" ");
@@ -290,15 +298,17 @@
 
   /* ---------- Kesiapan data ---------- */
   function readiness(M, I, info, profile) {
-    const missingDir = M.members.filter((m) => !m.inDirectory || !m.jabatan);
+    const missingDir = M.members.filter((m) => !m.inDirectory && !m.manualOk);
     return [
       { label: "File ekspor patroli SMART", ok: true, note: `${M.totals.wps} titik, ${M.totals.photos} foto` },
       { label: "Data Model SMART (nama kategori dan jenis)", ok: M.unknown.size === 0, note: M.unknown.size ? `${M.unknown.size} kode belum punya nama` : "semua kode punya nama" },
       { label: "Judul kegiatan (mandat patroli)", ok: !!(info.judul || M.patrol.mandate), note: `"${I.judul}"` },
       { label: "Tanggal Surat Tugas", ok: !!I.tanggalST },
-      { label: "Nomor dan tanggal DIPA", ok: !!(I.nomorDipa && I.tanggalDipa) },
+      { label: `DIPA TA.${I.year}`, ok: !!(I.nomorDipa && I.tanggalDipa), note: I.nomorDipa ? I.nomorDipa : "belum ada di data/dipa.json" },
       { label: "Jumlah anggaran", ok: !!I.anggaran },
-      { label: "Nama bergelar dan jabatan anggota", ok: !missingDir.length, note: missingDir.length ? `${missingDir.length} dari ${M.members.length} anggota belum ada di daftar personil` : "" },
+      { label: "Nomor Surat Tugas", ok: !!I.nomorST, note: I.nomorST || "ID patroli bukan nomor ST, isi manual" },
+      { label: "Tanggal pelaksanaan sesuai ST", ok: !!(info.tglMulai && info.tglSelesai), note: `${periodeSd(I.mulai, I.selesai)}${info.tglMulai ? "" : " (sementara dari data SMART)"}` },
+      { label: "Nama bergelar dan jabatan anggota", ok: !missingDir.length, note: missingDir.length ? `isi manual: ${missingDir.map((m) => m.smartName).join(", ")}` : "" },
       { label: "Kepala Balai dan Kasubbag TU (nama, NIP)", ok: !!(profile.kepalaBalaiNama && profile.kepalaBalaiNip && profile.kasubbagNama && profile.kasubbagNip) },
       { label: "Logo Balai untuk sampul", ok: !!profile.logo },
       { label: "Lapisan grid dan zonasi", ok: (M.hasLayers.grid && M.hasLayers.zonasi) || !!info.grids, note: M.hasLayers.grid ? `grid: ${M.grids.join(", ") || "-"}${M.zonas.length ? "; " + M.zonas.join(", ") : ""}` : info.grids ? "diisi manual" : "" },
@@ -357,20 +367,20 @@
       <p class="cv-title">LAPORAN PELAKSANAAN KEGIATAN<br>${esc(I.judul.toUpperCase())}<br>DI WILAYAH KERJA ${esc(I.lokasi.toUpperCase())}<br>${esc(balai.toUpperCase())}</p>
       ${profile.logo ? `<img class="cv-logo" src="${profile.logo}" alt="">` : `<div class="cv-logo nologo">Logo Balai<br>(atur di Profil Balai)</div>`}
       <p class="cv-by">OLEH:<br>TIM PELAKSANA KEGIATAN</p>
-      <p class="cv-st">${esc(p.id)}<br>${esc(periodeSd(p.startDate, p.endDate).toUpperCase())}</p>
+      <p class="cv-st">${esc(I.nomorST || "ST. ……………")}<br>${esc(periodeSd(I.mulai, I.selesai).toUpperCase())}</p>
       <p class="cv-place">${esc((I.kota || "………").toUpperCase())}, ${esc(bulanTahun.toUpperCase())}</p></div>`);
 
     /* Lembar pengesahan */
     toc.push({ lvl: 1, txt: "LEMBAR PENGESAHAN" });
     const kv = [
-      ["Judul Kegiatan", I.judulLengkap], ["Waktu Kegiatan", periodeSd(p.startDate, p.endDate)], ["Lokasi Kegiatan", I.lokasi],
+      ["Judul Kegiatan", I.judulLengkap], ["Waktu Kegiatan", periodeSd(I.mulai, I.selesai)], ["Lokasi Kegiatan", I.lokasi],
       ["Pelaksana", M.members.map((m, i) => `${i + 1}. ${m.name}`).join("\n")], ["Jumlah Anggaran", I.anggaran || "Rp. ……………"],
       ["Sumber Anggaran", I.sumberAnggaran || "……………"], ["Disusun di", I.kota || "……………"], ["Pada Tanggal", pengesahanTgl], ["Oleh", "Tim Pelaksana Kegiatan"]
     ];
     front.push(`<h1 class="pb ctr" id="pengesahan">LEMBAR PENGESAHAN</h1>
       <table class="kv-plain">${kv.map(([k, v]) => `<tr><td>${esc(k)}</td><td>:</td><td>${esc(v).replace(/\n/g, "<br>")}</td></tr>`).join("")}</table>
       <table class="sign"><tr><td>${sign(["Menyetujui", profile.kasubbagJabatan || "Kepala Sub Bagian Tata Usaha,"], profile.kasubbagNama, profile.kasubbagNip)}</td>
-      <td>${sign(["", "Tim Kegiatan"], I.penyusun ? I.penyusun.name : "", I.penyusun ? I.penyusun.employeeId : "")}</td></tr>
+      <td>${sign(["", "Tim Kegiatan"], I.penyusun ? I.penyusun.name : "", I.penyusun ? I.penyusun.nip : "")}</td></tr>
       <tr><td colspan="2">${sign(["Mengetahui", "Kepala Balai,"], profile.kepalaBalaiNama, profile.kepalaBalaiNip)}</td></tr></table>`);
 
     /* Bab I */
@@ -380,7 +390,7 @@
     /* Bab II */
     const dasar = lines(profile.dasarHukum);
     if (I.nomorDipa) dasar.push(`Pengesahan Daftar Isian Pelaksanaan Anggaran Tahun Anggaran ${I.year} Nomor ${I.nomorDipa}${I.tanggalDipa ? ` tanggal ${tglPanjang(I.tanggalDipa)}` : ""};`);
-    dasar.push(`Surat Tugas Nomor : ${p.id}${I.tanggalST ? ` tanggal ${tglPanjang(I.tanggalST)}` : ""} untuk melaksanakan Kegiatan ${I.judulLengkap}.`);
+    dasar.push(`Surat Tugas Nomor : ${I.nomorST || "……………"}${I.tanggalST ? ` tanggal ${tglPanjang(I.tanggalST)}` : ""} untuk melaksanakan Kegiatan ${I.judulLengkap}.`);
     body.push(h1("BAB II<br>PELAKSANAAN KEGIATAN", "bab2"), h2("A. Dasar Hukum"),
       `<p class="para">Berikut adalah aturan-aturan yang digunakan sebagai dasar hukum pelaksanaan kegiatan ${esc(I.judul)}:</p>`,
       `<ol class="list">${dasar.map((d) => `<li>${esc(d.replace(/^\d+[.)]\s*/, ""))}</li>`).join("")}</ol>`,
@@ -392,18 +402,18 @@
       h2("D. Tim Pelaksana Kegiatan"),
       `<p class="para">Tim pelaksana Kegiatan ${esc(I.judulLengkap)} terdiri dari:</p>`,
       `<p class="sub">Petugas ${esc(balai)} sebanyak ${M.members.length} orang.</p>`,
-      `<table class="data" data-block="tabel_anggota"><thead><tr><th>No</th><th>Nama</th><th>Nomor Induk Pegawai</th><th>Jabatan</th></tr></thead><tbody>${M.members.map((m, i) => `<tr><td class="c">${i + 1}</td><td>${esc(m.name)}${m.isLeader ? " <i>(Ketua Tim)</i>" : ""}</td><td>${esc(m.employeeId)}</td><td>${esc(m.jabatan || "-")}</td></tr>`).join("")}</tbody></table>`);
+      `<table class="data" data-block="tabel_anggota"><thead><tr><th>No</th><th>Nama</th><th>Nomor Induk Pegawai</th><th>Jabatan</th></tr></thead><tbody>${M.members.map((m, i) => `<tr><td class="c">${i + 1}</td><td>${esc(m.name)}${m.isLeader ? " <i>(Ketua Tim)</i>" : ""}</td><td>${esc(m.nip || "-")}</td><td>${esc(m.jabatan || "-")}</td></tr>`).join("")}</tbody></table>`);
 
     // Tata waktu (gantt)
-    const g0 = addDays(p.startDate, -I.rencanaHari), g1 = I.tanggalLaporan < p.endDate ? p.endDate : I.tanggalLaporan;
+    const g0 = addDays(I.mulai, -I.rencanaHari), g1 = I.tanggalLaporan < I.selesai ? I.selesai : I.tanggalLaporan;
     const gdays = [];
     for (let d = g0; d <= g1 && gdays.length < 45; d = addDays(d, 1)) gdays.push(d);
     const months = [];
     gdays.forEach((d) => { const m = BULAN[parseISO(d).getUTCMonth()]; const last = months[months.length - 1]; if (last && last.m === m) last.n++; else months.push({ m, n: 1 }); });
     const rows = [
-      [`Penyusunan Rencana Pelaksanaan Kegiatan ${I.judul}`, g0, addDays(p.startDate, -1)],
-      [`Pelaksanaan Kegiatan ${I.judul}`, p.startDate, p.endDate],
-      [`Penyusunan Laporan Kegiatan ${I.judul}`, addDays(p.endDate, 1), I.tanggalLaporan]
+      [`Penyusunan Rencana Pelaksanaan Kegiatan ${I.judul}`, g0, addDays(I.mulai, -1)],
+      [`Pelaksanaan Kegiatan ${I.judul}`, I.mulai, I.selesai],
+      [`Penyusunan Laporan Kegiatan ${I.judul}`, addDays(I.selesai, 1), I.tanggalLaporan]
     ];
     body.push(h2("E. Tata Waktu Pelaksanaan"), `<p class="para">Tata waktu pelaksanaan Kegiatan ${esc(I.judulLengkap)} adalah sebagai berikut:</p>`,
       `<table class="data gantt"><thead><tr><th rowspan="2">No</th><th rowspan="2">Jenis Kegiatan</th>${months.map((m) => `<th colspan="${m.n}">${m.m}</th>`).join("")}</tr><tr>${gdays.map((d) => `<th class="d">${parseISO(d).getUTCDate()}</th>`).join("")}</tr></thead><tbody>${rows.map((r, i) => `<tr><td class="c">${i + 1}.</td><td>${esc(r[0])}</td>${gdays.map((d) => `<td class="${d >= r[1] && d <= r[2] ? "on" : ""}"></td>`).join("")}</tr>`).join("")}</tbody></table>`);
@@ -425,7 +435,7 @@
 
     /* Bab IV */
     body.push(h1("BAB IV<br>PENUTUP", "bab4"), h2("A. Kesimpulan"), noteBlock(notes, "kesimpulan"), h2("B. Saran"), noteBlock(notes, "saran"));
-    body.push(`<table class="sign right" data-block="tanda_tangan"><tr><td></td><td>${sign([`Dibuat di ${I.kota || "………"}`, `Pada Tanggal ${pengesahanTgl}`, "Tim Pelaksana"], I.penyusun ? I.penyusun.name : "", I.penyusun ? I.penyusun.employeeId : "")}</td></tr></table>`);
+    body.push(`<table class="sign right" data-block="tanda_tangan"><tr><td></td><td>${sign([`Dibuat di ${I.kota || "………"}`, `Pada Tanggal ${pengesahanTgl}`, "Tim Pelaksana"], I.penyusun ? I.penyusun.name : "", I.penyusun ? I.penyusun.nip : "")}</td></tr></table>`);
 
     /* Lampiran */
     toc.push({ lvl: 1, txt: "LAMPIRAN" });

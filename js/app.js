@@ -46,8 +46,7 @@
     "Hal tersebut dapat berupa temuan manusia, penggunaan kawasan hutan secara tidak sah, perburuan satwa liar, illegal logging, akses jalan, kegiatan pemanenan ilegal, dan lain-lain."
   ].join("\n");
   const DEFAULT_PROFILE = {
-    balai: "Balai Taman Nasional Tambora", kota: "Dompu", logo: "", kepalaBalaiNama: "", kepalaBalaiNip: "",
-    kasubbagJabatan: "Kepala Sub Bagian Tata Usaha,", kasubbagNama: "", kasubbagNip: "", personil: "",
+    balai: "Balai Taman Nasional Tambora", kota: "Dompu", logo: "", pegawai: null,
     dasarHukum: DEFAULT_DASAR, metode: DEFAULT_METODE, basemap: "satelit"
   };
 
@@ -55,6 +54,7 @@
     profile: { ...DEFAULT_PROFILE, ...store.get("profile", {}) },
     dmDict: store.get("datamodel", null),
     customDict: store.get("customdict", SMART.emptyDict()),
+    manual: store.get("manualpegawai", {}),
     layers: [], patrol: null, photoUrls: new Map(), model: null, info: {}, notes: {}, maps: {}, mapKey: ""
   };
 
@@ -235,6 +235,7 @@
     }
     $("i_judul").placeholder = M0.mandate || "SMART Patrol";
     $("i_lokasi").placeholder = M0.station || "";
+    $("i_nomorST").placeholder = /^ST\.|\/T\.\d+\//i.test(M0.id) ? M0.id : "ID patroli: " + M0.id + " (isi nomor ST)";
     $("i_tempatTtd").placeholder = state.profile.kota || "Dompu";
   }
   let infoTimer;
@@ -271,6 +272,41 @@
       return out.map((x) => (x == null ? "" : String(x).trim()));
     }).filter((r) => r.some(Boolean));
   }
+  const pegawaiList = () => state.profile.pegawai || window.SRG_DEFAULT_PEGAWAI || [];
+  function pejabat(list) {
+    return {
+      kb: list.find((x) => /^kepala balai/i.test(x.jabatan)),
+      tu: list.find((x) => /(kepala )?sub ?bag(ian)? tata usaha|kasubbag ?tu|ksbtu/i.test(x.jabatan))
+    };
+  }
+  function renderPegawaiInfo() {
+    const list = pegawaiList(), { kb, tu } = pejabat(list);
+    if (!list.length) { $("pegawaiInfo").innerHTML = `<b>Belum ada daftar pegawai.</b> Impor file pegawai .xlsx sekali di browser ini.`; return; }
+    $("pegawaiInfo").innerHTML = `Daftar pegawai: <b>${list.length} orang</b> (${state.profile.pegawai ? "hasil impor" : "bawaan"}).<br>Kepala Balai: <b>${R.esc(kb ? kb.nama : "tidak ditemukan")}</b><br>Kasubbag TU: <b>${R.esc(tu ? tu.nama : "tidak ditemukan")}</b>`;
+  }
+  // Anggota patroli yang tidak ada di daftar pegawai: isian manual, disimpan per ID SMART
+  let manualKey = "";
+  function renderManual(M) {
+    const miss = M.members.filter((m) => !m.inDirectory);
+    const key = miss.map((m) => m.employeeId).join("|");
+    if (key === manualKey) return;
+    manualKey = key;
+    $("manualBox").innerHTML = miss.length ? `<div class="manual"><h3>Anggota di luar daftar pegawai</h3><p class="muted">Isi sekali, tersimpan di browser ini.</p>${miss.map((m) => {
+      const v = state.manual[m.employeeId] || {}, id = R.esc(m.employeeId);
+      const f = (k, label, ph) => `<label class="fld">${label} <input type="text" data-man="${id}" data-k="${k}" value="${R.esc(v[k] || "")}" placeholder="${R.esc(ph)}"></label>`;
+      return `<div class="who">${R.esc(m.smartName)} <small class="muted">(ID SMART ${id})</small></div>${f("nama", "Nama bergelar", m.smartName)}<div class="row2">${f("nip", "NIP / NIK", m.employeeId)}${f("pangkat", "Pangkat/Gol", "-")}</div>${f("jabatan", "Jabatan", "Masyarakat Mitra Polhut")}`;
+    }).join("")}</div>` : "";
+  }
+  let manTimer;
+  $("manualBox").addEventListener("input", (e) => {
+    const el = e.target.closest("[data-man]"); if (!el) return;
+    const rec = state.manual[el.dataset.man] || (state.manual[el.dataset.man] = {});
+    rec[el.dataset.k] = el.value.trim();
+    store.set("manualpegawai", state.manual);
+    clearTimeout(manTimer); manTimer = setTimeout(rebuild, 600);
+  });
+  $("resetPegawai").addEventListener("click", () => { state.profile.pegawai = null; store.set("profile", state.profile); setStatus($("pegawaiStatus"), ""); renderPegawaiInfo(); rebuild(); });
+
   async function importPegawai(file) {
     const st = $("pegawaiStatus");
     try {
@@ -279,7 +315,7 @@
       else rows = (await file.text()).split(/\r?\n/).map((l) => l.split(/[;,\t]/).map((x) => x.replace(/^"|"$/g, "").trim())).filter((r) => r.some(Boolean));
       const head = rows[0].map((h) => h.toLowerCase());
       const col = (re) => head.findIndex((h) => re.test(h));
-      const cNama = col(/nama/), cNip = col(/nip/), cJab = col(/jabatan/), cAktif = col(/aktif/);
+      const cNama = col(/nama/), cNip = col(/nip/), cJab = col(/jabatan/), cAktif = col(/aktif/), cPk = col(/pangkat|gol/);
       if (cNama < 0 || cNip < 0) throw new Error("Kolom Nama dan NIP tidak ditemukan di baris judul.");
       const bad = [], list = [];
       for (const r of rows.slice(1)) {
@@ -287,17 +323,14 @@
         if (!nama || /hapus baris ini/i.test(nama)) continue;
         if (cAktif >= 0 && /^t(idak)?$/i.test(r[cAktif] || "")) continue;
         if (nip.length !== 18) bad.push(nama);
-        list.push({ nama, nip, jab });
+        list.push({ nama, nip, jabatan: jab, pangkat: cPk >= 0 ? r[cPk] || "" : "" });
       }
       if (!list.length) throw new Error("Belum ada pegawai di file ini (baris contoh diabaikan).");
       const P = state.profile;
-      P.personil = list.map((x) => `${x.nip}; ${x.nama}; ${x.jab}`).join("\n");
-      const kb = list.find((x) => /^kepala balai/i.test(x.jab));
-      const tu = list.find((x) => /(kepala )?sub ?bag(ian)? tata usaha|kasubbag ?tu|ksbtu/i.test(x.jab));
-      if (kb) { P.kepalaBalaiNama = kb.nama; P.kepalaBalaiNip = kb.nip; }
-      if (tu) { P.kasubbagNama = tu.nama; P.kasubbagNip = tu.nip; }
+      P.pegawai = list;
+      const { kb, tu } = pejabat(list);
       store.set("profile", P);
-      for (const el of document.querySelectorAll("[data-prof]")) el.value = P[el.dataset.prof] ?? "";
+      renderPegawaiInfo();
       setStatus(st, `✓ ${list.length} pegawai dimuat.` + (kb ? "" : " Kepala Balai tidak ditemukan di kolom Jabatan.") + (tu ? "" : " Kasubbag TU tidak ditemukan di kolom Jabatan.") + (bad.length ? ` NIP tidak 18 digit: ${bad.slice(0, 3).join(", ")}${bad.length > 3 ? "…" : ""} (ketik NIP sebagai teks di Excel).` : ""), bad.length || !kb || !tu ? "" : "ok");
       rebuild();
     } catch (e) { console.error(e); setStatus(st, e.message, "err"); }
@@ -338,7 +371,12 @@
     if (building) { again = true; return; }
     building = true;
     try {
-      const P = { ...state.profile, logo: state.profile.logo || window.SRG_DEFAULT_LOGO || "" };
+      const list = pegawaiList(), { kb, tu } = pejabat(list);
+      const P = {
+        ...state.profile, logo: state.profile.logo || window.SRG_DEFAULT_LOGO || "", pegawai: list, manualPegawai: state.manual,
+        kepalaBalaiNama: kb ? kb.nama : "", kepalaBalaiNip: kb ? kb.nip : "", kasubbagJabatan: "Kepala Sub Bagian Tata Usaha,",
+        kasubbagNama: tu ? tu.nama : "", kasubbagNip: tu ? tu.nip : ""
+      };
       state.model = R.buildModel(state.patrol, dicts(), P, state.layers);
       const M = state.model;
       const I = R.deriveInfo(M, state.info, P);
@@ -375,6 +413,8 @@
       $("report").innerHTML = r.html;
       $("report").hidden = false; $("empty").hidden = true; $("toolbar").hidden = false;
       renderReady(R.readiness(M, I, state.info, P));
+      renderManual(M);
+      $("dipaInfo").innerHTML = I.nomorDipa ? `Sumber anggaran (tetap): <b>${R.esc(I.sumberAnggaran)}</b><br>DIPA Nomor <b>${R.esc(I.nomorDipa)}</b> tanggal <b>${R.esc(R.tglPanjang(I.tanggalDipa))}</b>` : `DIPA TA.${R.esc(I.year)} belum tercatat di data/dipa.json.`;
       $("unknownBtn").hidden = false;
       $("unknownBtn").textContent = M.unknown.size ? `Lengkapi kamus: ${M.unknown.size} kode belum dikenal` : "Edit kamus label";
     } catch (e) { console.error(e); busy("Gagal menyusun laporan: " + e.message); }
@@ -451,6 +491,7 @@
   }
   window.SRG_STATE = state; // untuk debugging di konsol
   bindProfile();
+  renderPegawaiInfo();
   dictSummary();
   (async () => {
     state.layers = restoreLayers(await idb.get("layers"));
