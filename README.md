@@ -22,9 +22,13 @@ Ekspor: **PDF** (Cetak), **Word .docx**, isi template Word sendiri, CSV temuan, 
 | Data | Di mana diisi | Keterangan |
 | --- | --- | --- |
 | Ekspor patroli SMART (.zip) | Langkah 1 | Patrol → Export, sertakan attachments. Judul kegiatan diambil dari mandat patroli |
-| Tanggal ST, nomor/tanggal DIPA, jumlah anggaran, tempat dan tanggal penandatanganan | Langkah 2 | Diisi oleh pembuat laporan, disimpan per nomor ST di browser |
-| Daftar pegawai (.xlsx) | Langkah 3 Profil | Kolom yang dibaca: Nama, NIP (teks 18 digit), Jabatan, dan Aktif bila ada. Kepala Balai dan Kasubbag TU dikenali dari kolom Jabatan |
-| Logo dan lapisan peta | Bawaan | `img/logo-tntambora.png` dan `data/*.geojson`, ditanam ke `js/defaults.js` |
+| Nomor dan tanggal ST, tanggal pelaksanaan sesuai ST, jumlah anggaran, tempat dan tanggal penandatanganan | Langkah 2 | Diisi oleh pembuat laporan, disimpan per ID patroli di browser |
+| Anggota di luar daftar pegawai | Langkah 2 | Muncul otomatis; isi nama, NIP/NIK, pangkat, jabatan sekali saja |
+| DIPA (nomor, tanggal, sumber anggaran) | Bawaan, tetap | `data/dipa.json` per tahun anggaran |
+| Daftar pegawai | Bawaan | `data/pegawai.xlsx`, urutan baris = urutan kepangkatan (dipakai untuk urutan tabel tim). Kolom: Nama, NIP (teks 18 digit), Jabatan, Pangkat/Gol. Kepala Balai dan Kasubbag TU dikenali dari kolom Jabatan |
+| Logo dan lapisan peta | Bawaan | `img/logo-tntambora.png` dan `data/*.geojson` |
+
+Semua data bawaan ditanam ke `js/defaults.js` dengan `python3 tools/build_defaults.py`. Jalankan ulang setelah mengganti daftar pegawai, DIPA tahun baru, logo, atau lapisan peta.
 | Data Model SMART | Bawaan | Muat ulang di Langkah 4 bila Data Model berubah |
 
 ## Pasang di GitHub Pages
@@ -34,7 +38,7 @@ Ekspor: **PDF** (Cetak), **Word .docx**, isi template Word sendiri, CSV temuan, 
 3. Settings → Pages → Source: *Deploy from a branch*, Branch: `main` / root → Save.
 4. Buka `https://<username>.github.io/lpk-smart-tambora/`.
 
-Jangan unggah file ekspor patroli, foto, atau daftar pegawai berisi NIP ke repository publik. Lapisan bawaan (termasuk jalur patroli) ikut terunggah; hapus `data/jalur.geojson` dan jalankan ulang `tools/build_defaults.py` bila jalur tidak boleh publik, atau jadikan repository privat.
+Daftar pegawai (berisi NIP) dan jalur patroli ikut terunggah bersama kode. Jadikan repository privat bila memungkinkan. Jangan unggah file ekspor patroli dan foto ke repository.
 
 ## Template Word sendiri
 

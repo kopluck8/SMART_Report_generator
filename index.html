@@ -11,7 +11,7 @@
 <header class="app-head noprint">
   <div class="brand">
     <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M12 2 3 6v6c0 5 3.8 9.4 9 10 5.2-.6 9-5 9-10V6l-9-4Zm0 2.2 7 3.1V12c0 3.9-2.9 7.4-7 8-4.1-.6-7-4.1-7-8V7.3l7-3.1Zm-1 4.3v4.8l-2.3-2.3-1.4 1.4L12 17.1l4.7-4.7-1.4-1.4-2.3 2.3V8.5h-2Z"/></svg>
-    <div><h1>Generator LPK SMART Patrol</h1><p>Laporan Pelaksanaan Kegiatan dari ekspor patroli SMART Desktop. Semua data diproses di browser.</p></div>
+    <div><h1>Generator LPK SMART Patrol</h1><p>Laporan Pelaksanaan Kegiatan dari ekspor patroli SMART Desktop, mengikuti format Balai TN Tambora. Semua data diproses di browser.</p></div>
   </div>
 </header>
 
@@ -34,20 +34,21 @@
         <p class="muted">Disimpan per nomor Surat Tugas di browser ini.</p>
         <div id="infoForm" class="form">
           <label class="fld">Judul kegiatan (otomatis dari mandat patroli) <input type="text" id="i_judul" data-info="judul" placeholder="SMART Patrol Rawan Tipihut"></label>
+          <label class="fld">Nomor Surat Tugas <input type="text" id="i_nomorST" data-info="nomorST" placeholder="ST.380/T.41/TU/DIPA/04/2026"></label>
           <label class="fld">Lokasi (wilayah kerja) <input type="text" id="i_lokasi" data-info="lokasi" placeholder="SPTN Wilayah II Pekat"></label>
           <label class="fld">Tanggal Surat Tugas <input type="date" id="i_tanggalST" data-info="tanggalST"></label>
-          <label class="fld">Jumlah anggaran (Rp) <input type="text" id="i_anggaran" data-info="anggaran" inputmode="numeric" placeholder="13875000"></label>
-          <label class="fld">Sumber anggaran <input type="text" id="i_sumberAnggaran" data-info="sumberAnggaran" placeholder="DIPA Balai Taman Nasional Tambora TA.2026"></label>
           <div class="row2">
-            <label class="fld">Nomor DIPA <input type="text" id="i_nomorDipa" data-info="nomorDipa" placeholder="DIPA-143.04.2.693577/2025"></label>
-            <label class="fld">Tanggal DIPA <input type="date" id="i_tanggalDipa" data-info="tanggalDipa"></label>
+            <label class="fld">Pelaksanaan mulai (sesuai ST) <input type="date" id="i_tglMulai" data-info="tglMulai"></label>
+            <label class="fld">Pelaksanaan selesai <input type="date" id="i_tglSelesai" data-info="tglSelesai"></label>
           </div>
+          <label class="fld">Jumlah anggaran (Rp) <input type="text" id="i_anggaran" data-info="anggaran" inputmode="numeric" placeholder="13875000"></label>
+          <p class="fixed" id="dipaInfo"></p>
           <div class="row2">
             <label class="fld">Tempat penandatanganan <input type="text" id="i_tempatTtd" data-info="tempatTtd" placeholder="Dompu"></label>
             <label class="fld">Tanggal penandatanganan <input type="date" id="i_tanggalLaporan" data-info="tanggalLaporan"></label>
           </div>
           <label class="fld">Grid (kosongkan jika memakai lapisan grid) <input type="text" id="i_grids" data-info="grids" placeholder="282, 35, 83, 86, 12"></label>
-          <label class="fld">Resor <input type="text" id="i_resort" data-info="resort" placeholder="Doro Ncanga"></label>
+          <div id="manualBox"></div>
           <label class="fld">Penyusun laporan <select id="i_penyusunNip" data-info="penyusunNip"></select></label>
           <label class="fld">Hari penyusunan rencana sebelum patroli <input type="number" id="i_rencanaHari" data-info="rencanaHari" min="0" max="14" value="1"></label>
           <label class="chk"><input type="checkbox" id="i_narasiOk" data-info="narasiOk"> Narasi Bab I–IV sudah diperiksa</label>
@@ -63,19 +64,11 @@
         <label class="fld">Kota penandatanganan bawaan <input type="text" id="p_kota" data-prof="kota" placeholder="Dompu"></label>
         <label class="fld">Logo Balai (bawaan: logo TN Tambora) <input type="file" id="p_logo" accept="image/*"></label>
         <button class="btn link" id="clearLogo" type="button">Kembali ke logo bawaan</button>
-        <label class="btn ghost full"><input type="file" id="pegawaiInput" accept=".xlsx,.csv" hidden>Impor daftar pegawai (.xlsx)</label>
+        <p class="fixed" id="pegawaiInfo"></p>
+        <label class="btn ghost full"><input type="file" id="pegawaiInput" accept=".xlsx,.csv" hidden>Ganti daftar pegawai (.xlsx)</label>
+        <button class="btn link" id="resetPegawai" type="button">Pakai daftar pegawai bawaan</button>
         <p class="status" id="pegawaiStatus"></p>
-        <p class="muted">Kolom yang dibaca: Nama, NIP, Jabatan (Aktif bila ada). Kepala Balai dan Kasubbag TU dikenali dari kolom Jabatan.</p>
-        <div class="row2">
-          <label class="fld">Kepala Balai <input type="text" id="p_kepalaBalaiNama" data-prof="kepalaBalaiNama" placeholder="Nama bergelar"></label>
-          <label class="fld">NIP <input type="text" id="p_kepalaBalaiNip" data-prof="kepalaBalaiNip"></label>
-        </div>
-        <label class="fld">Jabatan penyetuju <input type="text" id="p_kasubbagJabatan" data-prof="kasubbagJabatan" placeholder="Kepala Sub Bagian Tata Usaha,"></label>
-        <div class="row2">
-          <label class="fld">Nama penyetuju <input type="text" id="p_kasubbagNama" data-prof="kasubbagNama"></label>
-          <label class="fld">NIP <input type="text" id="p_kasubbagNip" data-prof="kasubbagNip"></label>
-        </div>
-        <label class="fld">Daftar personil (satu baris: NIP; Nama bergelar; Jabatan) <textarea id="p_personil" data-prof="personil" rows="5" placeholder="199804262025062013; Lale Dini Ardiantari, S.Hut; Polisi Kehutanan Ahli Pertama"></textarea></label>
+        <p class="muted">Urutan baris = urutan kepangkatan. Kolom yang dibaca: Nama, NIP, Jabatan, Pangkat/Gol. Kepala Balai dan Kasubbag TU dikenali dari kolom Jabatan.</p>
         <label class="fld">Dasar hukum (satu baris satu aturan; ST dan DIPA ditambahkan otomatis) <textarea id="p_dasarHukum" data-prof="dasarHukum" rows="5"></textarea></label>
         <label class="fld">Metode kegiatan (satu baris satu poin) <textarea id="p_metode" data-prof="metode" rows="5"></textarea></label>
         <div class="fld">Lapisan peta (bawaan: batas kawasan, zonasi, resor, jalur, grid). Tambah GeoJSON WGS84 atau shapefile .zip
