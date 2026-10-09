@@ -62,6 +62,12 @@ code { font-size: .85em; background: var(--accent-soft); padding: 1px 4px; borde
 
 .fld { display: flex; flex-direction: column; gap: 4px; font-size: .82rem; color: var(--muted); margin: 10px 0 0; }
 .fld textarea, .fld input[type=text], .fld select { font: inherit; font-size: .85rem; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.fixed { font-size: .8rem; color: var(--muted); background: var(--bg); border: 1px dashed var(--line); border-radius: 6px; padding: 6px 8px; margin: 10px 0 0; line-height: 1.45; }
+.fixed b { color: var(--text); font-weight: 600; }
+.manual { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-top: 10px; }
+.manual h3 { font-size: .82rem; margin: 0 0 2px; }
+.manual .who { font-size: .8rem; font-weight: 600; margin-top: 8px; }
+.manual .fld { margin-top: 4px; }
 .chk { display: flex; gap: 8px; align-items: center; font-size: .85rem; margin-top: 10px; }
 
 .main { min-width: 0; }
