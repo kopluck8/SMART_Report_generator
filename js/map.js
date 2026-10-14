@@ -65,6 +65,13 @@
       opts.lines.forEach((l) => l.coords.forEach((c) => all.push(c)));
       opts.points.forEach((p) => all.push([p.lon, p.lat]));
     }
+    // Area yang disorot (mis. grid rencana patroli) ikut menentukan cakupan peta
+    const hl = opts.highlight || [];
+    if (hl.length) {
+      hl.forEach((f) => (f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates).forEach((rings) => rings[0].forEach((c) => all.push(c))));
+      const xs = all.map((c) => c[0]), ys = all.map((c) => c[1]), cx0 = (Math.min(...xs) + Math.max(...xs)) / 2, cy0 = (Math.min(...ys) + Math.max(...ys)) / 2;
+      all.push([cx0 - 0.02, cy0 - 0.02], [cx0 + 0.02, cy0 + 0.02]);
+    }
     if (!all.length) return null;
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const [lon, lat] of all) {
@@ -165,6 +172,19 @@
       }
       if (drawn && st.label && layer.role !== "zonasi" && layer.role !== "grid") layerLegend.push({ type: "line", color: st.color, label: st.label, dash: st.dash.length > 0 });
       if (drawn && layer.role === "grid") layerLegend.push({ type: "area", color: "#ffffff", label: "Grid (nomor Grid ID)" });
+    }
+
+    // Grid rencana: arsiran merah tipis + garis tepi merah tebal
+    if (hl.length) {
+      const pat = document.createElement("canvas"); pat.width = pat.height = 14;
+      const pc = pat.getContext("2d"); pc.strokeStyle = "rgba(220,0,0,0.55)"; pc.lineWidth = 2; pc.beginPath(); pc.moveTo(0, 14); pc.lineTo(14, 0); pc.stroke();
+      const hatch = ctx.createPattern(pat, "repeat");
+      for (const f of hl) for (const rings of f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates) {
+        ctx.beginPath(); rings.forEach(ringPath);
+        ctx.fillStyle = "rgba(255,0,0,0.12)"; ctx.fill("evenodd"); ctx.fillStyle = hatch; ctx.fill("evenodd");
+        ctx.strokeStyle = "#e00000"; ctx.lineWidth = 4; ctx.stroke();
+      }
+      layerLegend.unshift({ type: "area", color: "#ffcccc", label: opts.highlightLabel || "Area rencana" });
     }
 
     // Lintasan

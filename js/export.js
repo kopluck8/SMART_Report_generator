@@ -105,7 +105,8 @@
     const textPara = (text, opts = {}, fmt = {}) => new D.Paragraph({ children: [new D.TextRun({ text: text || " ", ...fmt })], ...opts });
     const numbered = (n, text, fmt = {}) => new D.Paragraph({ alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { left: 720, hanging: 360 }, children: [new D.TextRun({ text: `${n}.\t${text}`, ...fmt })], tabStops: [{ type: D.TabStopType.LEFT, position: 720 }] });
     const bodyLine = (text) => {
-      const m = text.match(/^(\d+)[.)]\s+(.*)$/);
+      const m = text.match(/^(\d+)[.)]\s+(.*)$/), a = text.match(/^([a-z])[.)]\s+(.*)$/);
+      if (a) return new D.Paragraph({ alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { left: 1080, hanging: 360 }, children: [new D.TextRun({ text: `${a[1]}.\t${a[2]}` })], tabStops: [{ type: D.TabStopType.LEFT, position: 1080 }] });
       return m ? numbered(m[1], m[2]) : new D.Paragraph({ alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { firstLine: 720 }, children: [new D.TextRun({ text })] });
     };
 
@@ -123,17 +124,37 @@
       const ref = [...el.querySelectorAll("tr")].find((tr) => [...tr.children].every((td) => td.colSpan === 1 && td.rowSpan === 1) && tr.children.length === Math.max(...[...el.querySelectorAll("tr")].map((r) => [...r.children].reduce((a, td) => a + td.colSpan, 0))));
       const px = ref ? [...ref.children].map((td) => td.getBoundingClientRect().width) : [];
       const tot = px.reduce((a, b) => a + b, 0);
-      const colW = tot > 0 ? px.map((w) => Math.max(300, Math.round((w / tot) * 7937))) : undefined;
+      let colW = tot > 0 ? px.map((w) => Math.max(300, Math.round((w / tot) * 7937))) : undefined;
+      // Kolom angka/tengah (No, MAK, jumlah, rupiah) diberi lebar minimum supaya angkanya tidak terpotong ke baris baru
+      if (colW) {
+        const need = colW.map(() => 0), fixed = colW.map(() => false);
+        for (const tr of el.querySelectorAll("tr")) {
+          let ci = 0;
+          for (const td of tr.children) {
+            if (td.colSpan === 1) {
+              const t = td.textContent.trim();
+              if (td.tagName === "TH") need[ci] = Math.max(need[ci], Math.max(...t.split(/\s+/).map((w) => w.length)) * (size === 18 ? 100 : 115) + 140);
+              else if ((td.classList.contains("r") || td.classList.contains("c")) && t.length <= 16) { need[ci] = Math.max(need[ci], t.length * (size === 18 ? 100 : 115) + 140); fixed[ci] = true; }
+            }
+            ci += td.colSpan;
+          }
+        }
+        colW = colW.map((w, i) => (fixed[i] ? Math.max(w, need[i]) : w));
+        const fixW = colW.reduce((a, w, i) => a + (fixed[i] ? w : 0), 0), flexW = colW.reduce((a, w, i) => a + (fixed[i] ? 0 : w), 0);
+        if (flexW > 0 && fixW < 7937) colW = colW.map((w, i) => (fixed[i] ? w : Math.max(need[i] || 300, Math.round((w / flexW) * (7937 - fixW)))));
+      }
       return new D.Table({
         width: { size: 100, type: D.WidthType.PERCENTAGE }, borders,
         columnWidths: colW, layout: colW ? D.TableLayoutType.FIXED : undefined,
         rows: [...el.querySelectorAll("tr")].map((tr) => new D.TableRow({
           tableHeader: tr.parentElement.tagName === "THEAD",
-          children: [...tr.children].map((td) => {
+          children: [...tr.children].map((td, k, arr) => {
+            const ci = arr.slice(0, k).reduce((a, x) => a + x.colSpan, 0), w = colW ? colW.slice(ci, ci + td.colSpan).reduce((a, b) => a + b, 0) : 0;
             const head = td.tagName === "TH";
             const align = head || td.classList.contains("c") ? D.AlignmentType.CENTER : td.classList.contains("r") ? D.AlignmentType.RIGHT : D.AlignmentType.LEFT;
             const fill = td.classList.contains("on") ? "FFC000" : head ? "D9D9D9" : tr.classList.contains("total") ? "F2F2F2" : null;
             return new D.TableCell({
+              width: w ? { size: w, type: D.WidthType.DXA } : undefined,
               columnSpan: td.colSpan > 1 ? td.colSpan : undefined, rowSpan: td.rowSpan > 1 ? td.rowSpan : undefined,
               verticalAlign: D.VerticalAlign.CENTER,
               shading: fill ? { type: D.ShadingType.CLEAR, color: "auto", fill } : undefined,
@@ -145,14 +166,14 @@
       });
     }
 
-    function signCell(td) {
+    function signCell(td, w) {
       const kids = [];
       const sg = td.querySelector(".sg");
       if (sg) for (const d of sg.children) {
         if (d.classList.contains("space")) kids.push(textPara(""), textPara(""), textPara(""));
         else kids.push(textPara(d.textContent.trim(), { alignment: D.AlignmentType.CENTER }, d.classList.contains("nm") ? { bold: true, underline: {} } : {}));
       }
-      return new D.TableCell({ borders: noBorders, columnSpan: td.colSpan > 1 ? td.colSpan : undefined, children: kids.length ? kids : [textPara("")] });
+      return new D.TableCell({ borders: noBorders, width: w ? { size: w, type: D.WidthType.DXA } : undefined, columnSpan: td.colSpan > 1 ? td.colSpan : undefined, children: kids.length ? kids : [textPara("")] });
     }
 
     async function photoTable(el) {
@@ -186,6 +207,18 @@
         }
         return out;
       }
+      if (cls.contains("kop")) {
+        // Kop surat: logo kiri, teks instansi di tengah, garis tebal di bawah
+        const img = el.querySelector("img"), txt = [...el.querySelectorAll(".kop-t > div")];
+        const left = img ? [await imagePara(img.src, 62, { maxPx: 300 })] : [textPara("")];
+        const right = txt.map((d) => textPara(d.textContent.trim(), { alignment: D.AlignmentType.CENTER }, { bold: true, size: d.classList.contains("big") ? 26 : 20 }));
+        return [new D.Table({ width: { size: 100, type: D.WidthType.PERCENTAGE }, borders: noBorders, columnWidths: [1110, 6827], layout: D.TableLayoutType.FIXED, rows: [new D.TableRow({ children: [
+          new D.TableCell({ borders: noBorders, width: { size: 1110, type: D.WidthType.DXA }, verticalAlign: D.VerticalAlign.CENTER, children: left }),
+          new D.TableCell({ borders: noBorders, width: { size: 6827, type: D.WidthType.DXA }, verticalAlign: D.VerticalAlign.CENTER, children: right })] })] }),
+          new D.Paragraph({ border: { bottom: { style: D.BorderStyle.THICK, size: 18, color: "000000", space: 1 } }, children: [] }), textPara("")];
+      }
+      if (tag === "P" && cls.contains("cap")) return [para(el, { alignment: D.AlignmentType.CENTER, spacing: { before: 120, after: 120 } }, { bold: true })];
+      if (tag === "P" && cls.contains("li")) return [para(el, { spacing: { after: 60 } })];
       if (cls.contains("toc")) return [new D.TableOfContents("Daftar Isi", { hyperlink: true, headingStyleRange: "1-2" })];
       if (tag === "H1") return [new D.Paragraph({ heading: D.HeadingLevel.HEADING_1, alignment: D.AlignmentType.CENTER, pageBreakBefore: cls.contains("pb"), spacing: { after: 360, line: 360 }, children: runs(el, { bold: true }) })];
       if (tag === "H2") return [new D.Paragraph({ heading: D.HeadingLevel.HEADING_2, pageBreakBefore: cls.contains("pb"), spacing: { before: 240, after: 120, line: 360 }, children: runs(el, { bold: true }) })];
@@ -197,16 +230,17 @@
       if (tag === "P") return [para(el, { spacing: { after: 120 } })];
       if (tag === "TABLE" && cls.contains("kv-plain")) {
         return [new D.Table({
-          width: { size: 100, type: D.WidthType.PERCENTAGE }, borders: noBorders,
+          width: { size: 100, type: D.WidthType.PERCENTAGE }, borders: noBorders, columnWidths: [2381, 300, 5256], layout: D.TableLayoutType.FIXED,
           rows: [...el.querySelectorAll("tr")].map((tr) => new D.TableRow({ children: [...tr.children].map((td, i) => new D.TableCell({
-            borders: noBorders, width: { size: [30, 3, 67][i], type: D.WidthType.PERCENTAGE },
+            borders: noBorders, width: { size: [2381, 300, 5256][i], type: D.WidthType.DXA },
             children: td.innerText.split("\n").map((l) => textPara(l, { spacing: { after: 60 } }))
           })) }))
         }), textPara("")];
       }
       if (tag === "TABLE" && cls.contains("sign")) {
-        return [textPara(""), new D.Table({ width: { size: 100, type: D.WidthType.PERCENTAGE }, borders: noBorders,
-          rows: [...el.querySelectorAll("tr")].map((tr) => new D.TableRow({ cantSplit: true, children: [...tr.children].map(signCell) })) })];
+        const nCol = Math.max(...[...el.querySelectorAll("tr")].map((tr) => [...tr.children].reduce((a, td) => a + td.colSpan, 0)));
+        return [textPara(""), new D.Table({ width: { size: 100, type: D.WidthType.PERCENTAGE }, borders: noBorders, columnWidths: Array.from({ length: nCol }, () => Math.floor(7937 / nCol)), layout: D.TableLayoutType.FIXED,
+          rows: [...el.querySelectorAll("tr")].map((tr) => new D.TableRow({ cantSplit: true, children: [...tr.children].map((td) => signCell(td, Math.floor(7937 / nCol) * td.colSpan)) })) })];
       }
       if (tag === "TABLE") return [dataTable(el), textPara("")];
       if (tag === "FIGURE" && cls.contains("map")) return [await imagePara(el.querySelector("img").src, PAGE_W_PX, { maxPx: 1600 }), textPara("")];
@@ -231,7 +265,7 @@
   }
   const PAGE = { size: { width: 11906, height: 16838 }, margin: { top: 1701, bottom: 1701, left: 2268, right: 1701 } };
 
-  async function docx(reportEl, M, onProgress) {
+  async function docx(reportEl, M, onProgress, opts = {}) {
     const B = makeBuilder(), D = B.D;
     const sectionsEls = [...reportEl.querySelectorAll(":scope > section")];
     const front = sectionsEls.find((s) => s.classList.contains("sec-front")), body = sectionsEls.find((s) => s.classList.contains("sec-body"));
@@ -250,7 +284,7 @@
     if (bodyEls[0] && bodyEls[0].tagName === "H1") bodyKids[0] = new D.Paragraph({ heading: D.HeadingLevel.HEADING_1, alignment: D.AlignmentType.CENTER, spacing: { after: 360, line: 360 }, children: B.runs(bodyEls[0], { bold: true }) });
     const footer = (fmt) => ({ default: new D.Footer({ children: [new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [new D.TextRun({ children: [D.PageNumber.CURRENT] })] })] }) });
     const doc = new D.Document({
-      creator: "Generator LPK SMART Patrol", title: `Laporan ${M.patrol.id}`, styles: docStyles(), features: { updateFields: true },
+      creator: "Generator LPK SMART Patrol", title: opts.title || `Laporan ${M.patrol.id}`, styles: docStyles(), features: { updateFields: true },
       sections: [
         { properties: { page: PAGE }, children: coverKids },
         { properties: { page: { ...PAGE, pageNumbers: { start: 1, formatType: D.NumberFormat.LOWER_ROMAN } } }, footers: footer(), children: frontKids },
@@ -258,7 +292,7 @@
       ]
     });
     const blob = await D.Packer.toBlob(doc);
-    download(blob, `LPK_${safeName(M.patrol.id)}.docx`);
+    download(blob, opts.fileName || `LPK_${safeName(M.patrol.id)}.docx`);
   }
 
   /* ---------- Isi template Word milik sendiri ---------- */
@@ -330,5 +364,5 @@
     download(new Blob([out], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), `Laporan_${safeName(M.patrol.id)}.docx`);
   }
 
-  window.SRGExport = { makeBuilder, normalizeTemplate, splitRuns, csv, geojson, kml, docx, fillTemplate, textFields, BLOCKS, download };
+  window.SRGExport = { safeName, makeBuilder, normalizeTemplate, splitRuns, csv, geojson, kml, docx, fillTemplate, textFields, BLOCKS, download };
 })();

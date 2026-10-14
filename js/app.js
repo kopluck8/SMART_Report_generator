@@ -365,18 +365,22 @@
   });
 
   /* ---------- Membangun laporan ---------- */
+  // Profil lengkap untuk laporan: logo bawaan, daftar pegawai, Kepala Balai dan Kasubbag TU
+  function profileView() {
+    const list = pegawaiList(), { kb, tu } = pejabat(list);
+    return {
+      ...state.profile, logo: state.profile.logo || window.SRG_DEFAULT_LOGO || "", pegawai: list, manualPegawai: state.manual,
+      kepalaBalaiNama: kb ? kb.nama : "", kepalaBalaiNip: kb ? kb.nip : "", kasubbagJabatan: "Kepala Sub Bagian Tata Usaha,",
+      kasubbagNama: tu ? tu.nama : "", kasubbagNip: tu ? tu.nip : ""
+    };
+  }
   let building = false, again = false;
   async function rebuild() {
     if (!state.patrol) return;
     if (building) { again = true; return; }
     building = true;
     try {
-      const list = pegawaiList(), { kb, tu } = pejabat(list);
-      const P = {
-        ...state.profile, logo: state.profile.logo || window.SRG_DEFAULT_LOGO || "", pegawai: list, manualPegawai: state.manual,
-        kepalaBalaiNama: kb ? kb.nama : "", kepalaBalaiNip: kb ? kb.nip : "", kasubbagJabatan: "Kepala Sub Bagian Tata Usaha,",
-        kasubbagNama: tu ? tu.nama : "", kasubbagNip: tu ? tu.nip : ""
-      };
+      const P = profileView();
       state.model = R.buildModel(state.patrol, dicts(), P, state.layers);
       const M = state.model;
       const I = R.deriveInfo(M, state.info, P);
@@ -493,9 +497,11 @@
   bindProfile();
   renderPegawaiInfo();
   dictSummary();
-  (async () => {
+  const layersReady = (async () => {
     state.layers = restoreLayers(await idb.get("layers"));
     renderLayers();
     if (window.SRG_DEMO && window.SRG_PREVIEW_ONLY) $("demoBtn").click();
   })();
+  // Dipakai tab RPK: profil, daftar pegawai, lapisan peta, dan penyimpanan yang sama
+  window.SRG_APP = { state, store, idb, shrink, pegawaiList, pejabat, profileView, withBusy, layersReady };
 })();

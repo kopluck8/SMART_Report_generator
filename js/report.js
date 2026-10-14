@@ -466,5 +466,6 @@
     return { html: out.join("\n"), info: I };
   }
 
-  window.SRGReport = { buildModel, renderHTML, autoNotes, deriveInfo, readiness, periode, periodeSd, tglPanjang, num, hhmm, fmtNip, esc, lines, DAY_COLORS, BIODIV };
+  window.SRGReport = { buildModel, renderHTML, autoNotes, deriveInfo, readiness, periode, periodeSd, tglPanjang, num, hhmm, fmtNip, esc, lines, DAY_COLORS, BIODIV,
+    sign, noteBlock, terbilang, rupiah, addDays, parseISO, inGeom, BULAN };
 })();
