@@ -154,6 +154,51 @@ code { font-size: .85em; background: var(--accent-soft); padding: 1px 4px; borde
 .ktable td:nth-child(2) { font-family: ui-monospace, monospace; font-size: .76rem; word-break: break-all; color: var(--muted); }
 .ktable input { width: 100%; font: inherit; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); }
 
+/* ---------- Tab LPK / RPK ---------- */
+.tabs { display: flex; gap: 6px; max-width: 1400px; margin: 12px auto -14px; }
+.tab { font: inherit; font-size: .9rem; font-weight: 600; padding: 8px 16px; border: 1px solid var(--line); border-bottom: 0; border-radius: 10px 10px 0 0; background: var(--bg); color: var(--muted); cursor: pointer; }
+.tab small { font-weight: 400; margin-left: 4px; }
+.tab.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Form RPK ---------- */
+.picker { position: relative; margin: 4px 0 8px; }
+.picker input { width: 100%; font: inherit; font-size: .88rem; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); }
+.pick-list { display: flex; flex-direction: column; gap: 2px; max-height: 260px; overflow: auto; }
+.pick-list:not(:empty) { margin-top: 4px; border: 1px solid var(--line); border-radius: 8px; padding: 4px; background: var(--surface); }
+.pick { font: inherit; text-align: left; border: 0; background: none; color: var(--text); padding: 6px 8px; border-radius: 6px; cursor: pointer; display: flex; flex-direction: column; gap: 1px; }
+.pick:hover, .pick:focus-visible { background: var(--accent-soft); outline: none; }
+.pick small, .mem small { color: var(--muted); font-size: .76rem; }
+.team { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.team > .muted { margin: 0; }
+.mem { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: .84rem; }
+.mem .who { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.mem .koord { font-size: .72rem; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.sub-d { margin-top: 8px; font-size: .86rem; }
+.sub-d > summary { cursor: pointer; color: var(--accent); font-weight: 600; list-style: revert; }
+.sub-d textarea { width: 100%; }
+.rab-ed { overflow-x: auto; margin-top: 4px; }
+.rab-ed table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+.rab-ed th { text-align: left; font-weight: 600; color: var(--muted); padding: 2px; }
+.rab-ed td { padding: 2px; }
+.rab-ed input { width: 100%; min-width: 0; font: inherit; padding: 4px 5px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--text); }
+.rab-ed td:nth-child(1) { width: 62px; } .rab-ed td:nth-child(3) { width: 40px; } .rab-ed td:nth-child(4) { width: 50px; } .rab-ed td:nth-child(5) { width: 78px; } .rab-ed td:nth-child(6) { width: 22px; }
+.warn { color: var(--warn); font-weight: 600; }
+.scans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+.scan-it { border: 1px solid var(--line); border-radius: 8px; padding: 4px; font-size: .76rem; text-align: center; }
+.scan-it img { width: 100%; aspect-ratio: 1 / 1.41; object-fit: cover; display: block; border-radius: 4px; background: #fff; }
+
+/* ---------- Kertas RPK ---------- */
+.paper .kop { display: grid; grid-template-columns: 72px 1fr; gap: 10px; align-items: center; border-bottom: 3px solid #000; padding-bottom: 8px; margin-bottom: 18px; }
+.paper .kop img { width: 72px; height: auto; }
+.paper .kop-t { text-align: center; font-weight: 700; font-size: 10.5pt; line-height: 1.35; }
+.paper .kop-t .big { font-size: 13pt; }
+.paper p.cap { text-align: center; font-weight: 700; margin: 10px 0 8px; }
+.paper p.li { margin: 2px 0; }
+.paper table.rab td:nth-child(3) { text-align: left; }
+.paper figure.scan { break-inside: avoid; }
+.paper figure.scan + figure.scan { break-before: page; }
+
 @media screen and (max-width: 900px) {
   .layout { grid-template-columns: 1fr; padding: 16px; }
   .side { position: static; max-height: none; }
@@ -162,6 +207,8 @@ code { font-size: .85em; background: var(--accent-soft); padding: 1px 4px; borde
   .paper code, .muted code { word-break: break-all; }
   .paper .photos figure { width: 100%; margin-right: 0 !important; }
   .toolbar { position: static; }
+  .tabs { margin-bottom: -14px; }
+  .tab small { display: none; }
 }
 
 @page { size: A4; margin: 30mm 30mm 30mm 40mm; }
