@@ -1,6 +1,6 @@
-# Generator LPK SMART Patrol
+# Generator LPK & RPK SMART Patrol
 
-Aplikasi web statis (tanpa server) yang mengubah file ekspor patroli **SMART Desktop** (XML/zip) menjadi **Laporan Pelaksanaan Kegiatan (LPK)** dengan format Balai Taman Nasional Tambora. Semua data diproses di browser; tidak ada yang diunggah ke mana pun.
+Aplikasi web statis (tanpa server) yang mengubah file ekspor patroli **SMART Desktop** (XML/zip) menjadi **Laporan Pelaksanaan Kegiatan (LPK)** dengan format Balai Taman Nasional Tambora. Tab **RPK** menyusun **Rencana Pelaksanaan Kegiatan** dari isian form, tanpa file SMART. Semua data diproses di browser; tidak ada yang diunggah ke mana pun.
 
 ## Isi laporan
 
@@ -16,6 +16,16 @@ Mengikuti LPK resmi (contoh: ST.380 SPTN II Pekat):
 Semua narasi dibuat otomatis dan bisa diedit langsung di halaman. Panel **Kesiapan data laporan** menunjukkan data apa yang masih kurang sebelum laporan dicetak.
 
 Ekspor: **PDF** (Cetak), **Word .docx**, isi template Word sendiri, CSV temuan, KML, GeoJSON.
+
+## Tab RPK (Rencana Pelaksanaan Kegiatan)
+
+Mengikuti contoh RPK SMART Patrol ST.1167: sampul, lembar pengesahan berkop (PPK, Koordinator Kegiatan, Kepala Balai), daftar isi/tabel/gambar, Bab I Pendahuluan, Bab II Rencana Pelaksanaan (dasar hukum, waktu dan tempat, alat dan bahan, metode, tim pelaksana, RAB), Bab III Penutup, dan lampiran. Semua narasi memakai kalimat "akan dilaksanakan" dan bisa diedit langsung di halaman.
+
+- **Data rencana**: judul (bebas), nomor dan tanggal ST, lokasi, tanggal mulai/selesai, nomor grid, tempat dan tanggal penyusunan.
+- **Tim pelaksana**: cari nama/NIP/jabatan dari daftar pegawai (singkatan seperti *polhut* dan *PEH* dikenali), pilih koordinator; anggota di luar daftar (TNI/Polri, MMP, MPA) diisi manual. Urutan tabel mengikuti urutan kepangkatan di file pegawai, anggota manual di akhir.
+- **Pengesahan dan anggaran**: PPK dipilih dari daftar pegawai dan diingat untuk RPK berikutnya; akun anggaran; RAB yang bisa diedit (bawaan mengikuti contoh ST.1167) dengan total dan terbilang otomatis. DIPA diambil dari `data/dipa.json`.
+- **Lampiran**: peta "Rencana Smart Patrol Berbasis Grid" dibuat otomatis dari nomor grid (grid rencana diarsir merah, zona dan resor tiap grid dicek dari lapisan), lalu scan Surat Tugas JPG/PNG/PDF (halaman PDF diubah menjadi gambar dengan pdf.js 3.11.174 dari cdnjs, dimuat hanya saat dibutuhkan).
+- Keluaran: Cetak/Simpan PDF dan Word dengan nama `RPK_<nomor ST>.docx`. Data RPK terpisah dari LPK; yang dipakai bersama hanya Profil Balai, daftar pegawai, dan lapisan peta.
 
 ## Data yang disiapkan
 
@@ -70,6 +80,8 @@ Label tambahan di luar Data Model (atribut patroli seperti sumber anggaran) ada 
 | `js/report.js` | Model laporan, grid/zonasi dari lapisan, narasi otomatis, kesiapan data, HTML LPK |
 | `js/map.js` | Peta statis (canvas) dengan lapisan grid/zonasi |
 | `js/export.js` | Word .docx, isi template, CSV, KML, GeoJSON |
-| `js/app.js` | Antarmuka, profil, penyimpanan browser |
+| `js/app.js` | Antarmuka LPK, profil, penyimpanan browser |
+| `js/rpk.js` | Model, narasi, kesiapan data, dan HTML RPK |
+| `js/rpk-app.js` | Tab RPK: form, pencarian pegawai, RAB, peta grid, scan Surat Tugas |
 
-Pustaka dari CDN: JSZip 3.10.1, docx 8.5.0, shpjs 4.0.4.
+Pustaka dari CDN: JSZip 3.10.1, docx 8.5.0, shpjs 4.0.4, pdf.js 3.11.174 (khusus scan PDF di RPK).

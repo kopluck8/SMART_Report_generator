@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Generator LPK SMART Patrol</title>
+<title>Generator LPK & RPK SMART Patrol</title>
 <link rel="stylesheet" href="css/style.css">
 <!-- BUILD:CSS -->
 </head>
@@ -11,11 +11,15 @@
 <header class="app-head noprint">
   <div class="brand">
     <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M12 2 3 6v6c0 5 3.8 9.4 9 10 5.2-.6 9-5 9-10V6l-9-4Zm0 2.2 7 3.1V12c0 3.9-2.9 7.4-7 8-4.1-.6-7-4.1-7-8V7.3l7-3.1Zm-1 4.3v4.8l-2.3-2.3-1.4 1.4L12 17.1l4.7-4.7-1.4-1.4-2.3 2.3V8.5h-2Z"/></svg>
-    <div><h1>Generator LPK SMART Patrol</h1><p>Laporan Pelaksanaan Kegiatan dari ekspor patroli SMART Desktop.</p></div>
+    <div><h1>Generator LPK & RPK SMART Patrol</h1><p>Laporan dan Rencana Pelaksanaan Kegiatan mengikuti format Balai TN Tambora. Semua data diproses di browser.</p></div>
   </div>
+  <nav class="tabs" role="tablist">
+    <button type="button" role="tab" class="tab on" data-tab="lpk" aria-selected="true">LPK <small>Laporan Pelaksanaan</small></button>
+    <button type="button" role="tab" class="tab" data-tab="rpk" aria-selected="false">RPK <small>Rencana Pelaksanaan</small></button>
+  </nav>
 </header>
 
-<main class="layout">
+<main class="layout" id="paneLpk">
   <aside class="side noprint">
     <section class="card">
       <h2><span class="step">1</span> Muat data patroli</h2>
@@ -120,6 +124,108 @@
   </section>
 </main>
 
+<main class="layout" id="paneRpk" hidden>
+  <aside class="side noprint">
+    <section class="card">
+      <details open>
+        <summary><h2><span class="step">1</span> Data rencana</h2></summary>
+        <p class="muted">Diisi manual, terpisah dari LPK. Tersimpan di browser ini sampai Anda memulai RPK baru.</p>
+        <div id="rpkForm" class="form">
+          <label class="fld">Judul kegiatan <input type="text" data-rpk="judul" placeholder="SMART Patrol Rawan Tipihut"></label>
+          <label class="fld">Nomor Surat Tugas <input type="text" data-rpk="nomorST" placeholder="ST.1167/T.41/TU/DIPA/10/2026"></label>
+          <label class="fld">Tanggal Surat Tugas <input type="date" data-rpk="tanggalST"></label>
+          <label class="fld">Lokasi (wilayah kerja) <input type="text" data-rpk="lokasi" placeholder="SPTN Wilayah I Kadindi"></label>
+          <div class="row2">
+            <label class="fld">Akan dilaksanakan mulai <input type="date" data-rpk="tglMulai"></label>
+            <label class="fld">Sampai <input type="date" data-rpk="tglSelesai"></label>
+          </div>
+          <label class="fld">Nomor grid rencana <input type="text" data-rpk="grids" placeholder="414, 448, 449"></label>
+          <p class="fixed" id="rGridInfo"></p>
+          <div class="row2">
+            <label class="fld">Tempat penyusunan <input type="text" data-rpk="tempatTtd" placeholder="Dompu"></label>
+            <label class="fld">Tanggal penyusunan <input type="date" data-rpk="tanggalTtd"></label>
+          </div>
+          <label class="chk"><input type="checkbox" data-rpk="narasiOk"> Narasi Bab I–III sudah diperiksa</label>
+        </div>
+      </details>
+    </section>
+
+    <section class="card">
+      <details open>
+        <summary><h2><span class="step">2</span> Tim pelaksana</h2></summary>
+        <div class="picker">
+          <input type="search" id="rSearch" placeholder="Cari nama, NIP, atau jabatan pegawai" autocomplete="off">
+          <div class="pick-list" id="rResults"></div>
+        </div>
+        <div id="rTeam" class="team"></div>
+        <details class="sub-d">
+          <summary>Tambah anggota di luar daftar pegawai (TNI/Polri, MMP, MPA)</summary>
+          <div class="form" id="rManForm">
+            <label class="fld">Nama <input type="text" data-m="nama" placeholder="Bripka Nama Lengkap"></label>
+            <div class="row2">
+              <label class="fld">NIP / NRP / NIK <input type="text" data-m="nip"></label>
+              <label class="fld">Pangkat/Gol <input type="text" data-m="pangkat" placeholder="-"></label>
+            </div>
+            <label class="fld">Jabatan <input type="text" data-m="jabatan" placeholder="Anggota Polsek Pekat"></label>
+            <button class="btn ghost full" id="rManAdd" type="button">Tambahkan ke tim</button>
+          </div>
+        </details>
+      </details>
+    </section>
+
+    <section class="card">
+      <details open>
+        <summary><h2><span class="step">3</span> Pengesahan dan anggaran</h2></summary>
+        <div class="fld">Pejabat Pembuat Komitmen
+          <div class="picker">
+            <input type="search" id="rPpkSearch" placeholder="Cari nama PPK" autocomplete="off">
+            <div class="pick-list" id="rPpkResults"></div>
+          </div>
+          <p class="fixed" id="rPpkInfo"></p>
+        </div>
+        <label class="fld">Akun anggaran <input type="text" data-rpk="akun" placeholder="7273.REA.002.051.A.521219 (PNP)"></label>
+        <p class="fixed" id="rDipaInfo"></p>
+        <div class="fld">Rincian anggaran (RAB)
+          <div class="rab-ed" id="rRab"></div>
+          <div class="btnrow"><button class="btn small ghost" id="rRabAdd" type="button">Tambah baris</button><button class="btn small link" id="rRabReset" type="button">Pakai RAB contoh</button></div>
+        </div>
+        <details class="sub-d">
+          <summary>Dasar hukum RPK</summary>
+          <label class="fld">Satu baris satu aturan; DIPA dan Surat Tugas ditambahkan otomatis <textarea id="rDasar" rows="6"></textarea></label>
+          <button class="btn link" id="rDasarReset" type="button">Pakai dasar hukum bawaan</button>
+        </details>
+      </details>
+    </section>
+
+    <section class="card">
+      <details open>
+        <summary><h2><span class="step">4</span> Lampiran</h2></summary>
+        <p class="muted">Peta Rencana Pelaksanaan Kegiatan dibuat otomatis dari nomor grid di langkah 1, memakai lapisan dan peta dasar di Profil Balai (tab LPK).</p>
+        <label class="btn ghost full"><input type="file" id="rScanInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" multiple hidden>Unggah scan Surat Tugas (JPG, PNG, PDF)</label>
+        <p class="status" id="rScanStatus"></p>
+        <div id="rScans" class="scans"></div>
+      </details>
+    </section>
+
+    <section class="card">
+      <button class="btn ghost full" id="rNew" type="button">Mulai RPK baru</button>
+      <p class="muted">Mengosongkan isian, tim, narasi, dan scan. Profil, PPK, dan RAB tetap disimpan.</p>
+    </section>
+  </aside>
+
+  <section class="main">
+    <div class="toolbar noprint" id="rToolbar">
+      <button class="btn primary" id="rPrintBtn" type="button">Cetak / Simpan PDF</button>
+      <button class="btn" id="rDocxBtn" type="button">Unduh Word (.docx)</button>
+      <div class="sep"></div>
+      <button class="btn small ghost" id="rResetNotes" type="button">Atur ulang narasi</button>
+    </div>
+    <p class="status noprint" id="rBusy"></p>
+    <section class="ready noprint" id="rReady" hidden></section>
+    <article id="rpkReport" class="paper"></article>
+  </section>
+</main>
+
 <dialog id="unknownDlg" class="dlg">
   <form method="dialog">
     <h2>Lengkapi kamus label</h2>
@@ -154,6 +260,8 @@
 <script src="js/report.js"></script>
 <script src="js/export.js"></script>
 <script src="js/app.js"></script>
+<script src="js/rpk.js"></script>
+<script src="js/rpk-app.js"></script>
 <!-- BUILD:END -->
 </body>
 </html>
