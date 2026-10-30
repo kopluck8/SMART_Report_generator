@@ -19,6 +19,7 @@ Ekspor: **PDF** (Cetak), **Word .docx**, isi template Word sendiri, CSV temuan, 
 
 ## Input bersama LPK dan RPK
 
+- **Judul baku kegiatan** (7 pilihan, sama untuk LPK dan RPK): SMART Patrol bersama MMP/MPA/Pokmas/masyarakat; identifikasi gangguan karhutla dan potensi kawasan; pemasangan dan unduh data kamera jebak; bersama TNI/Polri; patroli pencegahan kebakaran bersama masyarakat (reguler dan PNBP PKH); patroli pencegahan/pengendalian bersama TNI/Polri/masyarakat (BB). Latar belakang, maksud, tujuan, ruang lingkup, metode, analisis, pembahasan, saran, dan alat bawaan menyesuaikan judul. Judul yang diketik sendiri dicocokkan dengan kata kunci; mandat patroli juga dicocokkan. Daftar dan teksnya ada di `KEGIATAN` dalam `js/report.js`.
 - **Anggaran**: akun dan rincian per MAK (jenis, volume, satuan, harga). LPK memakai rincian terakhir dari RPK sebagai awal, lalu disimpan per patroli.
 - **Alat dan bahan**: tabel jenis, jumlah, satuan.
 - **Tim**: setiap anggota punya unsur (Balai, Polri, TNI, MMP, MPA, masyarakat). Unsur ditebak dari pangkat (Bripka, Serda, dst.) dan bisa diganti. Di LPK, anggota yang ikut tetapi tidak tercatat di SMART bisa ditambahkan.

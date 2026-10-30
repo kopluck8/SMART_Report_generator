@@ -13,7 +13,7 @@
   const rs = {
     draft: { ...EMPTY(), ...store.get("rpk:draft", {}) },
     rab: store.get("rpk:rab", null) || R.DEFAULT_RAB.map((r) => ({ ...r })),
-    alat: store.get("rpk:alat", null) || R.DEFAULT_ALAT.map((r) => ({ ...r })),
+    alat: store.get("rpk:alat", null) || R.alatFor(null),
     ppk: store.get("rpk:ppk", null),
     notes: {}, map: null, mapKey: "", I: null, active: false
   };
@@ -39,6 +39,7 @@
     }
     document.querySelector('[data-rpk="tempatTtd"]').placeholder = A.state.profile.kota || "Dompu";
     $("rDasar").value = A.state.profile.dasarHukum || R.DEFAULT_DASAR;
+    rJudul.sync();
   }
   let t1;
   document.querySelectorAll("[data-rpk]").forEach((el) => el.addEventListener("input", () => {
@@ -114,6 +115,9 @@
   $("rRabAdd").addEventListener("click", () => { const last = rs.rab[rs.rab.length - 1]; rabEd.add({ mak: last ? last.mak : "", jenis: "", vol: "", sat: "", harga: "" }); });
   $("rRabReset").addEventListener("click", () => { rs.rab = R.DEFAULT_RAB.map((r) => ({ ...r })); store.set("rpk:rab", rs.rab); rabEd.render(); rebuild(); });
   $("rAlatAdd").addEventListener("click", () => alatEd.add({ nama: "", jumlah: "", sat: "unit" }));
+  const rJudul = U.bindJudul($("r_jenis"), $("r_judul"), (k) => {
+    if (U.alatUntouched(rs.alat)) { rs.alat = R.alatFor(k); store.set("rpk:alat", rs.alat); alatEd.render(); later(); }
+  });
 
   /* ---------- Scan Surat Tugas ---------- */
   const scans = U.scanBox({ input: $("rScanInput"), list: $("rScans"), status: $("rScanStatus"), idb, shrink: A.shrink, getKey: () => "rpk:scans", onChange: () => rebuild() });

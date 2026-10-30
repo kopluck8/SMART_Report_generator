@@ -84,7 +84,7 @@
     state.info = store.get("info:" + p.id, {});
     // Isian yang diseragamkan dengan RPK: RAB (bawaan dari RAB RPK terakhir), alat dan bahan, anggota di luar SMART
     if (!state.info.rab) state.info.rab = (store.get("rpk:rab", null) || R.DEFAULT_RAB).map((r) => ({ ...r }));
-    if (!state.info.alat) state.info.alat = R.DEFAULT_ALAT.map((r) => ({ ...r }));
+    if (!state.info.alat) state.info.alat = R.alatFor(R.kegiatanOf(state.info.judul || p.mandate));
     if (!state.info.extra) state.info.extra = [];
     await lpkScans.load();
     const nWp = p.legs.reduce((s, l) => s + l.days.reduce((a, d) => a + d.waypoints.length, 0), 0);
@@ -232,6 +232,7 @@
       if (el.type === "checkbox") el.checked = !!v; else el.value = v ?? (el.dataset.info === "rencanaHari" ? 1 : "");
     }
     $("i_judul").placeholder = M0.mandate || "SMART Patrol";
+    lJudul.sync();
     $("i_lokasi").placeholder = M0.station || "";
     $("i_nomorST").placeholder = /^ST\.|\/T\.\d+\//i.test(M0.id) ? M0.id : "ID patroli: " + M0.id + " (isi nomor ST)";
     $("i_tempatTtd").placeholder = state.profile.kota || "Dompu";
@@ -245,6 +246,9 @@
   });
 
   /* ---------- Isian yang sama dengan RPK: anggaran, alat, anggota tambahan, scan ST ---------- */
+  const lJudul = SRGUI.bindJudul($("i_jenis"), $("i_judul"), (k) => {
+    if (state.patrol && SRGUI.alatUntouched(state.info.alat || [])) { state.info.alat = R.alatFor(k); alatEd.render(); saveInfo(true); }
+  });
   const saveInfo = (now) => { if (!state.patrol) return; store.set("info:" + pid(), state.info); clearTimeout(infoTimer); infoTimer = setTimeout(rebuild, now ? 0 : 600); };
   const rabEd = SRGUI.rowsEditor($("lRab"), SRGUI.RAB_COLS, () => state.info.rab || [], saveInfo, SRGUI.rabFooter);
   const alatEd = SRGUI.rowsEditor($("lAlat"), SRGUI.ALAT_COLS, () => state.info.alat || [], saveInfo);

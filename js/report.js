@@ -129,6 +129,210 @@
   ];
   const DEFAULT_AKUN = "7273.REA.002.051.A.521219 (PNP)";
 
+  /* ---------- Judul baku kegiatan dan isi khusus per judul ----------
+   * Setiap judul membawa konteks latar belakang, maksud, tujuan, ruang lingkup, tambahan metode/analisis,
+   * butir pembahasan dan saran (LPK), alat tambahan, dan unsur tim yang diharapkan.
+   * Teks netral waktu; "{akan }" menjadi "akan " di RPK dan hilang di LPK. */
+  const ALAT_KARHUT = [
+    { nama: "Pompa punggung (jet shooter)", jumlah: "", sat: "unit" },
+    { nama: "Pemukul api (gepyok)", jumlah: "", sat: "buah" },
+    { nama: "Garu tajam/cangkul", jumlah: "", sat: "buah" },
+    { nama: "Parang/golok", jumlah: "", sat: "buah" },
+    { nama: "Jeriken air", jumlah: "", sat: "buah" }
+  ];
+  const ALAT_KAMERA = [
+    { nama: "Kamera jebak (camera trap)", jumlah: "", sat: "unit" },
+    { nama: "Baterai cadangan kamera jebak", jumlah: "", sat: "buah" },
+    { nama: "Kartu memori (SD card)", jumlah: "", sat: "buah" },
+    { nama: "Tali pengikat, pelindung, dan gembok kamera", jumlah: "", sat: "set" },
+    { nama: "Laptop dan pembaca kartu memori", jumlah: "", sat: "unit" }
+  ];
+  const K_MITRA = {
+    konteks: "Pengamanan kawasan tidak dapat dilakukan oleh petugas Balai saja. Masyarakat Mitra Polhut (MMP), Masyarakat Peduli Api (MPA), Kelompok Masyarakat (Pokmas), dan masyarakat di sekitar kawasan mengenal kondisi lapangan dan berperan penting dalam deteksi dini gangguan serta penyampaian informasi kepada masyarakat. Patroli bersama mitra sekaligus menjadi sarana pembinaan dan peningkatan kapasitas mitra dalam perlindungan kawasan.",
+    metode: [
+      "Sebelum berangkat dilakukan pengarahan (briefing) kepada anggota mitra mengenai jalur, pembagian tugas, keselamatan, dan cara mengenali serta mencatat temuan.",
+      "Anggota mitra didampingi petugas Balai dalam mengenali, mendokumentasikan, dan melaporkan temuan; tindakan terhadap dugaan pelanggaran hanya dilakukan oleh petugas yang berwenang."
+    ],
+    pembahasan: ["Peran unsur masyarakat selama kegiatan: {mitra}. [asal kelompok (MMP/MPA/Pokmas/desa), kontribusi seperti penunjuk jalan, informasi lokal, dan pencatatan, serta peningkatan kemampuan yang terlihat]"],
+    saran: ["Melanjutkan pembinaan dan pelatihan MMP/MPA/Pokmas, termasuk penggunaan SMART Mobile, agar mitra dapat menyampaikan informasi gangguan kawasan secara mandiri dan cepat."],
+    perlu: ["masyarakat"]
+  };
+  const K_APARAT = {
+    konteks: "Gangguan kawasan seperti perambahan, pembalakan liar, perburuan satwa, dan pembakaran lahan dapat melibatkan pelaku yang terorganisasi dan berpotensi menimbulkan konflik di lapangan. Sinergi dengan TNI dan Polri, sebagaimana Nota Kesepahaman Kementerian Kehutanan dengan TNI dan dengan Polri, memperkuat kehadiran aparat di lapangan, meningkatkan efek pencegahan, dan mendukung penegakan hukum apabila ditemukan dugaan tindak pidana kehutanan.",
+    metode: [
+      "Sebelum pelaksanaan dilakukan koordinasi dan pengarahan bersama unsur TNI/Polri mengenai sasaran, jalur, pembagian tugas, dan prosedur bertindak di lapangan.",
+      "Apabila ditemukan dugaan tindak pidana kehutanan, tim mengamankan lokasi dan barang bukti, mendokumentasikan, dan melaporkan kepada pimpinan untuk ditindaklanjuti sesuai kewenangan; tindakan hukum dilakukan oleh penyidik yang berwenang."
+    ],
+    pembahasan: [
+      "Peran unsur TNI/Polri selama kegiatan: {aparat}. [bentuk kegiatan bersama, koordinasi dengan Koramil/Polsek setempat, dan informasi gangguan dari aparat]",
+      "Temuan yang berindikasi tindak pidana kehutanan: [ada/tidak ada; bila ada: jenis, barang bukti, tindakan yang diambil, dan status penanganan]."
+    ],
+    saran: ["Melanjutkan patroli bersama TNI/Polri pada lokasi dengan gangguan berulang serta memperkuat pertukaran informasi dengan Koramil dan Polsek setempat."],
+    perlu: ["aparat"]
+  };
+  const K_CEGAH = {
+    konteks: "Pencegahan merupakan upaya paling efektif dan efisien dalam pengendalian kebakaran hutan dan lahan (karhutla). Sebagian besar kebakaran berasal dari aktivitas manusia, seperti pembukaan lahan dengan api, perburuan, pengambilan madu dengan pengasapan, penggembalaan, dan api yang ditinggalkan. Patroli pencegahan dilaksanakan pada musim rawan kebakaran untuk memantau lokasi rawan, menyampaikan imbauan larangan membakar, dan melakukan pemadaman awal apabila ditemukan api.",
+    maksud: "pencegahan kebakaran hutan dan lahan di kawasan Taman Nasional Tambora melalui patroli, deteksi dini, imbauan, dan pemadaman awal",
+    tujuan: [
+      "Memantau lokasi rawan kebakaran dan mendeteksi secara dini titik api aktif;",
+      "Menyampaikan sosialisasi dan imbauan larangan membakar kepada masyarakat di dalam dan sekitar kawasan;",
+      "Melakukan pemadaman awal terhadap api yang ditemukan dan melaporkannya untuk ditindaklanjuti;",
+      "Mendata lokasi bekas terbakar, perkiraan luas, dan dugaan sumber api;",
+      "Meningkatkan kesiapsiagaan dan peran serta masyarakat dalam pencegahan karhutla."
+    ],
+    ruang: [
+      "Patroli pada lokasi rawan kebakaran berdasarkan riwayat kebakaran, informasi titik panas (hotspot), dan laporan masyarakat;",
+      "Sosialisasi dan imbauan pencegahan kebakaran kepada masyarakat yang dijumpai;",
+      "Pemadaman awal dan pemeriksaan ulang lokasi api;",
+      "Pencatatan data lapangan menggunakan aplikasi SMART Mobile, termasuk titik koordinat dan dokumentasi temuan."
+    ],
+    metode: [
+      "Patroli diarahkan pada lokasi rawan kebakaran berdasarkan riwayat kebakaran, informasi titik panas (hotspot), dan laporan masyarakat.",
+      "Tim membawa peralatan pemadaman awal; api aktif yang ditemukan dipadamkan sesuai kemampuan dan peralatan, dilaporkan kepada pimpinan, dan diperiksa kembali sampai dipastikan padam.",
+      "Pada lokasi bekas terbakar dicatat perkiraan waktu kejadian, jenis vegetasi terbakar, dan dugaan sumber api; batas area diukur dengan tracking keliling GPS bila memungkinkan.",
+      "Imbauan larangan membakar disampaikan secara langsung kepada masyarakat yang dijumpai di dalam dan sekitar kawasan."
+    ],
+    analisis: "Luas area bekas terbakar {akan }dihitung dari poligon tracking keliling GPS atau digitasi, dan dibedakan dari jumlah objek terbakar yang tercatat di SMART.",
+    pembahasan: [
+      "Hasil sosialisasi dan imbauan pencegahan kebakaran: [lokasi dan jumlah masyarakat yang diberi imbauan, materi yang disampaikan, dan tanggapan masyarakat].",
+      "Pemantauan titik panas (hotspot) selama kegiatan: [ada/tidak ada; bila ada: tanggal, lokasi, dan hasil pengecekan lapangan]."
+    ],
+    saran: ["Meningkatkan frekuensi patroli pencegahan pada puncak musim kemarau [bulan] di lokasi rawan, serta memastikan kesiapan peralatan pemadaman awal di pos dan kelompok MPA."],
+    alat: ALAT_KARHUT, fire: true
+  };
+  const join = (...ks) => ks.reduce((a, k) => ({ ...a, ...k,
+    konteks: [a.konteks, k.konteks].filter(Boolean).join(" "),
+    metode: [...(a.metode || []), ...(k.metode || [])], pembahasan: [...(a.pembahasan || []), ...(k.pembahasan || [])],
+    saran: [...(a.saran || []), ...(k.saran || [])], perlu: [...(a.perlu || []), ...(k.perlu || [])], alat: [...(a.alat || []), ...(k.alat || [])],
+    fire: a.fire || k.fire }), {});
+  const KEGIATAN = [
+    { id: "mitra", judul: "SMART Patrol Bersama MMP/MPA/Pokmas/Masyarakat di Kawasan TN Tambora", ...join(K_MITRA, {
+      maksud: "pengamanan kawasan Taman Nasional Tambora secara partisipatif bersama masyarakat mitra serta peningkatan peran serta masyarakat dalam perlindungan kawasan",
+      tujuan: [
+        "Mendeteksi dan mendokumentasikan gangguan kawasan secara dini bersama masyarakat mitra;",
+        "Meningkatkan pengetahuan dan keterampilan anggota MMP/MPA/Pokmas dalam pengamanan kawasan dan pencatatan data SMART;",
+        "Menyampaikan imbauan dan sosialisasi peraturan kawasan kepada masyarakat yang dijumpai;",
+        "Mengumpulkan data potensi kawasan berupa satwa liar, tumbuhan, sumber air, dan sarana prasarana;",
+        "Membangun komunikasi dan jejaring informasi gangguan kawasan antara Balai dan masyarakat."
+      ],
+      ruang: [
+        "Patroli bersama masyarakat mitra pada jalur dan grid sasaran;",
+        "Pendampingan anggota mitra dalam mengenali, mendokumentasikan, dan melaporkan temuan;",
+        "Imbauan dan sosialisasi kepada masyarakat yang dijumpai di dalam dan sekitar kawasan;",
+        "Pencatatan data lapangan menggunakan aplikasi SMART Mobile, termasuk titik koordinat dan dokumentasi temuan."
+      ]
+    }) },
+    { id: "identifikasi", judul: "SMART Patrol dalam Rangka Identifikasi Gangguan Karhutla dan Potensi Kawasan", fire: true, alat: ALAT_KARHUT,
+      konteks: "Kebakaran hutan dan lahan (karhutla) merupakan salah satu gangguan utama di kawasan Taman Nasional Tambora, terutama pada musim kemarau di ekosistem savana dan hutan musim yang mudah terbakar. Identifikasi lokasi rawan, bekas terbakar, dan aktivitas manusia yang berpotensi menjadi sumber api perlu dilakukan bersamaan dengan pendataan potensi kawasan, sehingga upaya pencegahan dapat diarahkan pada lokasi yang tepat dengan tetap memperhatikan nilai penting kawasan yang harus dilindungi.",
+      maksud: "identifikasi gangguan kebakaran hutan dan lahan serta pendataan potensi kawasan Taman Nasional Tambora sebagai dasar perencanaan pencegahan karhutla dan pengelolaan kawasan",
+      tujuan: [
+        "Mengidentifikasi titik api aktif, lokasi bekas terbakar, dan lokasi rawan kebakaran;",
+        "Mengidentifikasi aktivitas manusia yang berpotensi menjadi sumber api, seperti pembukaan lahan, penggembalaan, pengambilan madu, dan perburuan;",
+        "Mengukur dan mendokumentasikan luas serta kondisi area bekas terbakar;",
+        "Mendata potensi kawasan berupa satwa liar, tumbuhan, sumber air, dan tutupan lahan;",
+        "Menyediakan data spasial sebagai dasar penetapan lokasi prioritas pencegahan karhutla."
+      ],
+      ruang: [
+        "Penyisiran lokasi rawan kebakaran dan lokasi bekas terbakar;",
+        "Pengukuran luas dan dokumentasi area bekas terbakar serta pencatatan dugaan sumber api;",
+        "Pendataan potensi kawasan: satwa liar, tumbuhan, sumber air, dan tutupan lahan;",
+        "Imbauan kepada masyarakat yang ditemukan beraktivitas di dalam kawasan;",
+        "Pencatatan data lapangan menggunakan aplikasi SMART Mobile, termasuk titik koordinat dan dokumentasi temuan."
+      ],
+      metode: [
+        "Pada lokasi bekas terbakar, batas area diukur dengan tracking keliling GPS bila memungkinkan, serta dicatat perkiraan waktu kejadian, jenis vegetasi terbakar, dan dugaan sumber api.",
+        "Pada api aktif, tim melakukan pemadaman awal sesuai kemampuan dan peralatan, melaporkan kepada pimpinan, dan memastikan kondisi api sebelum meninggalkan lokasi."
+      ],
+      analisis: "Lokasi rawan kebakaran {akan }ditentukan dari sebaran bekas terbakar, titik api, dan aktivitas manusia berisiko per grid, lalu ditumpangsusunkan dengan sebaran potensi kawasan.",
+      pembahasan: [
+        "Lokasi rawan kebakaran yang teridentifikasi: [lokasi/grid, tipe vegetasi, dan faktor kerawanan seperti bahan bakar, akses, dan aktivitas manusia].",
+        "Potensi kawasan yang tercatat [ringkas nilai penting: satwa/tumbuhan dilindungi, sumber air] perlu dipertimbangkan dalam penentuan lokasi prioritas pencegahan karhutla."
+      ],
+      saran: ["Menetapkan lokasi rawan dan bekas terbakar hasil kegiatan ini sebagai sasaran patroli pencegahan karhutla pada musim kemarau berikutnya."]
+    },
+    { id: "kamera", judul: "SMART Patrol dalam Rangka Pemasangan dan Unduh Data Kamera Jebak untuk Pemantauan Satwa dan Deteksi Dini Kebakaran", alat: ALAT_KAMERA,
+      konteks: "Kamera jebak (camera trap) bekerja terus-menerus tanpa kehadiran petugas, sehingga dapat merekam keberadaan dan aktivitas satwa liar, aktivitas manusia, serta kejadian kebakaran di lokasi yang sulit dijangkau secara rutin. Pemasangan, perawatan, dan pengunduhan data kamera jebak yang dipadukan dengan SMART Patrol memungkinkan data kamera dan data patroli dianalisis dalam satu sistem.",
+      maksud: "pemantauan satwa liar dan deteksi dini kebakaran hutan dan lahan melalui pemasangan, perawatan, dan pengunduhan data kamera jebak",
+      tujuan: [
+        "Memasang atau memindahkan kamera jebak pada titik pemantauan yang ditentukan;",
+        "Mengunduh data serta merawat kamera jebak (baterai, kartu memori, dan posisi kamera);",
+        "Mengidentifikasi jenis satwa liar yang terekam dan menghitung kejadian independen per jenis;",
+        "Mendeteksi aktivitas manusia dan indikasi kebakaran yang terekam kamera jebak;",
+        "Mencatat temuan di sepanjang jalur menuju titik kamera menggunakan SMART."
+      ],
+      ruang: [
+        "Pemasangan, pengecekan, dan pengunduhan data kamera jebak pada titik pemantauan;",
+        "Identifikasi rekaman satwa liar, aktivitas manusia, dan indikasi kebakaran;",
+        "Pencatatan temuan di sepanjang jalur menggunakan aplikasi SMART Mobile, termasuk titik koordinat dan dokumentasi temuan."
+      ],
+      metode: [
+        "Setiap titik kamera jebak dicatat kode kamera, koordinat, tanggal dan jam pemasangan atau pengecekan, ketinggian dan arah kamera, kondisi baterai dan kartu memori, serta foto kondisi pemasangan.",
+        "Data kamera diunduh ke media penyimpanan, diberi nama sesuai kode kamera dan tanggal, lalu diidentifikasi per kejadian independen dengan selang minimal 30 menit antar-rekaman jenis yang sama pada kamera yang sama."
+      ],
+      analisis: "Rekaman kamera jebak {akan }dianalisis per titik: jumlah hari aktif kamera (trap-days), jumlah foto/video, jumlah kejadian independen per jenis, dan indeks kelimpahan relatif (RAI = kejadian independen ÷ hari aktif × 100).",
+      pembahasan: [
+        "Rekap kamera jebak: [per kamera: kode, koordinat/grid, tanggal pasang, tanggal unduh, hari aktif, jumlah foto/video, jenis satwa terekam, dan kondisi kamera].",
+        "Rekaman aktivitas manusia atau indikasi kebakaran dari kamera jebak: [ada/tidak ada; uraian]."
+      ],
+      saran: ["Menjadwalkan pengunduhan data dan penggantian baterai berikutnya pada [tanggal], serta mengevaluasi titik kamera yang tidak merekam satwa."]
+    },
+    { id: "aparat", judul: "SMART Patrol Bersama TNI/POLRI", ...join(K_APARAT, {
+      maksud: "pengamanan kawasan Taman Nasional Tambora secara terpadu bersama TNI/Polri untuk mencegah dan menanggulangi gangguan kawasan",
+      tujuan: [
+        "Menghadirkan aparat gabungan di lokasi rawan gangguan untuk mencegah tindak pidana kehutanan;",
+        "Mendeteksi dan mendokumentasikan gangguan kawasan secara dini;",
+        "Mengamankan lokasi dan barang bukti serta mengumpulkan bahan keterangan awal apabila ditemukan dugaan tindak pidana;",
+        "Menyampaikan imbauan dan penyuluhan hukum kepada masyarakat yang dijumpai;",
+        "Memperkuat koordinasi dan pertukaran informasi antara Balai, TNI, dan Polri."
+      ],
+      ruang: [
+        "Patroli gabungan bersama TNI/Polri pada lokasi rawan gangguan;",
+        "Pengecekan informasi gangguan kawasan dan pengamanan lokasi temuan;",
+        "Imbauan dan penyuluhan hukum kepada masyarakat;",
+        "Pencatatan data lapangan menggunakan aplikasi SMART Mobile, termasuk titik koordinat dan dokumentasi temuan."
+      ]
+    }) },
+    { id: "cegah", judul: "Patroli Pencegahan Kebakaran Hutan Bersama MMP/MPA/Pokmas/Masyarakat", ...join(K_CEGAH, K_MITRA) },
+    { id: "cegah_pnbp", judul: "Patroli Pencegahan Kebakaran Hutan Bersama MMP/MPA/Pokmas/Masyarakat (PNBP PKH)", ...join(K_CEGAH, K_MITRA, { konteks: "Kegiatan ini dibiayai dari Penerimaan Negara Bukan Pajak Penggunaan Kawasan Hutan (PNBP PKH)." }) },
+    { id: "cegah_aparat", judul: "Patroli Pencegahan/Pengendalian Kebakaran Hutan Bersama TNI/POLRI/Masyarakat (BB)", ...join(K_CEGAH, K_APARAT, K_MITRA, {
+      maksud: "pencegahan dan pengendalian kebakaran hutan dan lahan di kawasan Taman Nasional Tambora secara terpadu bersama TNI/Polri dan masyarakat",
+      tujuan: [...K_CEGAH.tujuan.slice(0, 4), "Memperkuat sinergi Balai, TNI/Polri, dan masyarakat dalam pencegahan dan penanganan karhutla serta penegakan larangan membakar."]
+    }) }
+  ];
+  // Cocokkan judul (atau mandat patroli) ke judul baku
+  function kegiatanOf(judul) {
+    const s = String(judul || "").toLowerCase();
+    if (!s) return null;
+    const exact = KEGIATAN.find((k) => k.judul.toLowerCase() === s.trim());
+    if (exact) return exact;
+    const fire = /kebakaran|karhut/.test(s), aparat = /\btni\b|polri/.test(s), pnbp = /pnbp|\bpkh\b/.test(s);
+    const id = /kamera|camera/.test(s) ? "kamera"
+      : /^patroli/.test(s) && /pencegahan|pengendalian/.test(s) && fire ? (aparat ? "cegah_aparat" : pnbp ? "cegah_pnbp" : "cegah")
+      : fire ? "identifikasi" : aparat ? "aparat" : /mmp|mpa|pokmas|masyarakat/.test(s) ? "mitra" : null;
+    return KEGIATAN.find((k) => k.id === id) || null;
+  }
+  const alatFor = (k) => [...DEFAULT_ALAT, ...((k && k.alat) || [])].map((r) => ({ ...r }));
+  // Teks khusus judul: {akan } sesuai LPK/RPK, {mitra}/{aparat} diganti ringkasan anggota tim
+  function kegText(s, rpk, members) {
+    const n = (keys) => (members || []).filter((m) => keys.includes(m.unsur)).length;
+    const mas = n(["mmp", "mpa", "masyarakat"]), apa = n(["tni", "polri"]);
+    return String(s || "").replace(/\{akan \}/g, rpk ? "akan " : "")
+      .replace(/\{mitra\}/g, mas ? `${nTxt(mas)} orang unsur masyarakat (MMP/MPA/Pokmas/masyarakat) ikut dalam tim` : "[jumlah anggota unsur masyarakat]")
+      .replace(/\{aparat\}/g, apa ? `${nTxt(apa)} orang unsur TNI/Polri ikut dalam tim` : "[jumlah anggota TNI/Polri]");
+  }
+  // Metode umum (Profil) ditambah langkah khusus judul yang belum ada
+  const metodeLines = (text, k) => {
+    const base = lines(text || DEFAULT_METODE).map((x) => x.replace(/^\d+[.)]\s*/, ""));
+    return [...base, ...((k && k.metode) || []).filter((x) => !base.includes(x))];
+  };
+  // Cek unsur tim yang diharapkan judul
+  function kegTeamCheck(k, members) {
+    if (!k || !k.perlu || !k.perlu.length) return null;
+    const has = (keys) => members.some((m) => keys.includes(m.unsur));
+    const kurang = [...new Set(k.perlu)].filter((p) => !(p === "aparat" ? has(["tni", "polri"]) : has(["mmp", "mpa", "masyarakat"])));
+    return { label: "Unsur tim sesuai judul kegiatan", ok: !kurang.length, note: kurang.length ? `judul menyebut ${kurang.map((p) => (p === "aparat" ? "TNI/Polri" : "MMP/MPA/Pokmas/masyarakat")).join(" dan ")}, tetapi belum ada di tim` : "" };
+  }
+
   // Unsur tim pelaksana. Tabel dan narasi dikelompokkan: Balai, Polri, TNI, masyarakat (MMP/MPA/masyarakat)
   const UNSUR = { balai: "Balai Taman Nasional Tambora", polri: "Polri", tni: "TNI", mmp: "Masyarakat Mitra Polhut (MMP)", mpa: "Masyarakat Peduli Api (MPA)", masyarakat: "Masyarakat" };
   const UNSUR_GROUPS = [
@@ -424,6 +628,12 @@
   }
 
   /* ---------- Info kegiatan turunan ---------- */
+  // "... di Kawasan TN Tambora" menjadi "... di Wilayah Kerja X Kawasan TN Tambora" agar kata "di" tidak ganda
+  const judulLengkap = (judul, lokasi) => {
+    if (!lokasi) return judul;
+    const m = judul.match(/^(.*?)\s+di\s+(Kawasan .*)$/i);
+    return m ? `${m[1]} di Wilayah Kerja ${lokasi}, ${m[2]}` : `${judul} di Wilayah Kerja ${lokasi}`;
+  };
   function deriveInfo(M, info, profile) {
     const p = M.patrol;
     const mulai = info.tglMulai || p.startDate, selesai = info.tglSelesai && info.tglSelesai >= mulai ? info.tglSelesai : (info.tglMulai && info.tglMulai > p.endDate ? info.tglMulai : p.endDate);
@@ -437,13 +647,13 @@
     const akun = (info.akun || DEFAULT_AKUN).trim();
     const rab = rabRows(info.rab || []), total = rab.reduce((s, r) => s + r.total, 0);
     return {
-      judul, lokasi, judulLengkap: `${judul} di Wilayah Kerja ${lokasi}`, grids,
+      judul, lokasi, judulLengkap: judulLengkap(judul, lokasi), grids,
       gridText: grids ? `Grid ${grids.replace(/,\s*([^,]+)$/, ", dan $1")}` : "",
       resort: info.resort || M.resorts.join(", "), akun, rab, total,
       sumberAnggaran: sumberAnggaran(year, akun), anggaran: rupiah(total), tanggalST: info.tanggalST || "", nomorDipa: dipa.nomor || "", tanggalDipa: dipa.tanggal || "",
       nomorST: (info.nomorST || "").trim() || (looksST ? p.id : ""), mulai, selesai, hari: Math.round((parseISO(selesai) - parseISO(mulai)) / 864e5) + 1,
       tanggalLaporan: info.tanggalLaporan || addDays(selesai, 3), kota: info.tempatTtd || profile.kota || "", penyusun,
-      rencanaHari: Math.max(0, Number(info.rencanaHari ?? 1)), year, alat: info.alat || DEFAULT_ALAT, metodeText: profile.metode, fire: isFire(judul) || M.observations.some((o) => o.fire)
+      rencanaHari: Math.max(0, Number(info.rencanaHari ?? 1)), year, alat: info.alat || alatFor(kegiatanOf(judul)), metodeText: profile.metode, keg: kegiatanOf(judul), fire: isFire(judul) || !!(kegiatanOf(judul) || {}).fire || M.observations.some((o) => o.fire)
     };
   }
 
@@ -455,7 +665,8 @@
     const am = g("aktivitasmanusia"), fires = M.observations.filter((o) => o.fire);
     const zonaTxt = M.zonas.length ? `, zona ${listText(M.zonas.map((z) => z.replace(/^zona\s+/i, "")))}` : "";
     const resorTxt = I.resort ? `, Resor ${I.resort}` : "";
-    const tujuan = I.fire ? [
+    const K = I.keg, kt = (x) => kegText(x, false, M.members), num1 = (a) => a.map((x, i) => `${i + 1}. ${kt(x)}`);
+    const tujuan = K && K.tujuan ? num1(K.tujuan) : I.fire ? [
       "1. Mendeteksi secara dini indikasi kebakaran hutan dan lahan, termasuk titik api aktif dan bekas terbakar;",
       "2. Memantau lokasi rawan kebakaran serta aktivitas manusia yang berpotensi menjadi sumber api;",
       "3. Melakukan tindakan awal dan melaporkan api aktif yang ditemukan untuk ditindaklanjuti;",
@@ -472,19 +683,20 @@
     const notes = {
       latar: [
         "Taman Nasional Tambora merupakan kawasan konservasi yang ditetapkan untuk melindungi keunikan ekosistem pascaletusan tahun 1815, melalui Keputusan Menteri Lingkungan Hidup dan Kehutanan Nomor SK.111/Menlhk-II/2015 dengan luas 71.645,64 hektare. Kawasan ini dikelola oleh Balai Taman Nasional Tambora untuk mempertahankan nilai-nilai konservasi sumber daya alam hayati dan ekosistemnya.",
-        `Pengelolaan kawasan dibagi ke dalam beberapa wilayah kerja, salah satunya ${I.lokasi}. Tekanan terhadap kawasan, seperti perambahan, pembalakan liar, perburuan satwa, dan kebakaran hutan dan lahan, menuntut pola pengamanan yang berbasis data dan teknologi.`,
+        `Pengelolaan kawasan dibagi ke dalam beberapa wilayah kerja, salah satunya ${I.lokasi}. Tekanan terhadap kawasan, seperti perambahan, pembalakan liar, perburuan satwa, dan kebakaran hutan dan lahan, menuntut pola pengamanan yang berbasis data dan teknologi.${K && K.konteks ? " " + K.konteks : ""}`,
         `Oleh karena itu, dilaksanakan kegiatan ${I.judulLengkap} pada tanggal ${periodeSd(I.mulai, I.selesai)}${where}. Dengan metode Spatial Monitoring and Reporting Tool (SMART), setiap temuan di lapangan dapat terdeteksi secara dini, terdokumentasi secara akurat, dan ditindaklanjuti secara cepat.`
       ].join("\n"),
       maksud: [
-        `Kegiatan ${I.judulLengkap} dimaksudkan sebagai upaya ${I.fire ? "pencegahan kebakaran hutan dan lahan serta " : ""}pengamanan dan pemantauan kawasan Taman Nasional Tambora secara terukur dan berbasis data${I.gridText ? `, khususnya pada ${I.gridText}` : ""}.`,
+        `Kegiatan ${I.judulLengkap} dimaksudkan sebagai upaya ${K && K.maksud ? K.maksud : `${I.fire ? "pencegahan kebakaran hutan dan lahan serta " : ""}pengamanan dan pemantauan kawasan Taman Nasional Tambora secara terukur dan berbasis data`}${I.gridText ? `, khususnya pada ${I.gridText}` : ""}.`,
         "Adapun tujuan kegiatan ini adalah:", ...tujuan
       ].join("\n"),
       ruanglingkup: [
         `Ruang lingkup kegiatan secara kewilayahan mencakup wilayah kerja ${I.lokasi}, Balai Taman Nasional Tambora${I.gridText ? `, khususnya pada ${I.gridText}` : ""}. Ruang lingkup materi kegiatan meliputi:`,
-        `1. Melakukan pelacakan dan pendataan terhadap indikasi aktivitas manusia${I.fire ? " dan indikasi kebakaran" : ""} di dalam kawasan;`,
-        "2. Mengamati kondisi tutupan hutan, keberadaan satwa liar dan tumbuhan, serta potensi titik api;",
-        "3. Memberikan imbauan kepada masyarakat yang ditemukan beraktivitas di dalam kawasan;",
-        "4. Melakukan input data lapangan menggunakan aplikasi SMART Mobile, termasuk titik koordinat dan dokumentasi visual temuan."
+        ...(K && K.ruang ? num1(K.ruang) : [
+          `1. Melakukan pelacakan dan pendataan terhadap indikasi aktivitas manusia${I.fire ? " dan indikasi kebakaran" : ""} di dalam kawasan;`,
+          "2. Mengamati kondisi tutupan hutan, keberadaan satwa liar dan tumbuhan, serta potensi titik api;",
+          "3. Memberikan imbauan kepada masyarakat yang ditemukan beraktivitas di dalam kawasan;",
+          "4. Melakukan input data lapangan menggunakan aplikasi SMART Mobile, termasuk titik koordinat dan dokumentasi visual temuan."])
       ].join("\n"),
       lokasi: [
         `Lokasi kegiatan berada di wilayah kerja ${I.lokasi}${resorTxt}${I.gridText ? `, pada ${I.gridText}` : ""}${zonaTxt}. Jalur patroli yang terekam sepanjang ${modeTxt || "±" + num(t.km, 2) + " km"}.`,
@@ -494,10 +706,11 @@
         `Kegiatan ${I.judulLengkap} dilaksanakan selama ${nTxt(I.hari)} hari, terhitung mulai tanggal ${periodeSd(I.mulai, I.selesai)} sesuai Surat Tugas. Waktu tersebut merupakan keseluruhan waktu kerja tim, termasuk persiapan, perjalanan menuju lokasi, pelaksanaan patroli, dan kembali ke kantor.`,
         `Perekaman data SMART dilakukan pada ${nTxt(t.days)} hari, yaitu ${daysTxt}. Jam pada tabel berikut adalah sesi perekaman SMART (awal dan akhir track yang terekam), bukan keseluruhan waktu kerja harian tim.`
       ].join("\n"),
-      metode: lines(I.metodeText || DEFAULT_METODE).map((x, i) => `${i + 1}. ${x.replace(/^\d+[.)]\s*/, "")}`).join("\n"),
+      metode: metodeLines(I.metodeText, K).map((x, i) => `${i + 1}. ${x}`).join("\n"),
       analisis: [
         "Data hasil patroli diunduh dari SMART Mobile ke SMART Desktop, kemudian diverifikasi meliputi kesesuaian kategori temuan, koordinat, tanggal, foto, dan kemungkinan pencatatan ganda.",
-        `Data yang telah diverifikasi dianalisis secara deskriptif kuantitatif: jumlah catatan per kategori, jumlah titik koordinat unik, jumlah jenis yang teridentifikasi, serta sebaran temuan per grid patroli 1 km × 1 km, zona, dan resor melalui tumpang susun (overlay) dengan peta kerja Balai. Panjang lintasan dihitung dari track GPS per hari dan dipisahkan menurut moda${M.modes.some((m) => m.drone) ? " (lintasan darat dan penerbangan drone)" : ""}. Hasil analisis disajikan dalam tabel, peta sebaran, dan dokumentasi.`
+        `Data yang telah diverifikasi dianalisis secara deskriptif kuantitatif: jumlah catatan per kategori, jumlah titik koordinat unik, jumlah jenis yang teridentifikasi, serta sebaran temuan per grid patroli 1 km × 1 km, zona, dan resor melalui tumpang susun (overlay) dengan peta kerja Balai. Panjang lintasan dihitung dari track GPS per hari dan dipisahkan menurut moda${M.modes.some((m) => m.drone) ? " (lintasan darat dan penerbangan drone)" : ""}. Hasil analisis disajikan dalam tabel, peta sebaran, dan dokumentasi.`,
+        ...(K && K.analisis ? [kt(K.analisis)] : [])
       ].join("\n"),
       hasil: `Selama pelaksanaan kegiatan, tim mencatat ${t.obs} catatan temuan pada ${t.coords} titik koordinat unik${I.gridText ? ` di ${I.gridText}` : ""}${resorTxt ? " wilayah" + resorTxt.replace(/^,/, "") : ""}, terdiri atas ${listText(M.groups.map((x) => `${x.items.length} catatan ${x.label.toLowerCase()}`))}. Satu titik koordinat dapat memuat lebih dari satu catatan, sehingga jumlah catatan tidak sama dengan jumlah titik lokasi atau jumlah kejadian.`,
       pembahasan: "", kesimpulan: "", saran: "",
@@ -524,6 +737,7 @@
     const gc = g("groundcheck"), ft = g("fitur");
     if (gc) pem.push(`Ground check pada ${gc.items.length} titik memberikan data tutupan lahan aktual. Klasifikasi tutupan lahan didasarkan pada ${PH("dasar klasifikasi: pengamatan visual struktur vegetasi/kriteria tutupan lahan yang digunakan")}.`);
     if (ft) pem.push(`Pengamatan fitur (${ft.items.length} catatan, berupa ${listText(ft.subs.map((s) => s.label.toLowerCase()))}) memberikan informasi kondisi sarana prasarana, batas kawasan, dan sumber air. ${PH("jelaskan kondisi yang diamati, termasuk mata air, dan alasan perlu/tidak perlu tindak lanjut")}`);
+    if (K) pem.push(...(K.pembahasan || []).map(kt));
     pem.push(`Lintasan yang terekam sepanjang ${modeTxt || "±" + num(t.km, 2) + " km"}. Keterbatasan pengamatan: ${PH("cuaca, akses, waktu perekaman yang tidak mencakup seluruh hari kerja, sinyal GPS, dan hal lain yang memengaruhi data")}.`);
     if (M.duplicates.length) pem.push(`Terdapat ${M.duplicates.length} kelompok catatan dengan kategori, jenis, tanggal, dan koordinat yang sama. ${PH("jelaskan apakah merupakan pengamatan berbeda atau pencatatan ganda berdasarkan waktu/ID temuan")}`);
     kes.push(am ? `Masih terdapat ${am.items.length} catatan aktivitas manusia di dalam kawasan pada ${am.coords} titik koordinat, berupa ${listText(am.subs.map((s) => s.label.toLowerCase()))}.` : "Tidak tercatat aktivitas manusia yang mengganggu kawasan selama patroli.");
@@ -537,6 +751,7 @@
     if (inv) sar.push(`Melakukan pemantauan dan pengendalian spesies invasif (${inv.species.slice(0, 3).map((s) => s.name).join(", ")}) di lokasi temuan.`);
     const unid = M.groups.reduce((s, x) => s + x.unidentified, 0);
     if (unid) sar.push(`Melakukan identifikasi lanjutan terhadap ${unid} catatan jenis yang belum ada di daftar aplikasi dan mengusulkan penambahan ke Data Model SMART.`);
+    if (K) sar.push(...(K.saran || []).map(kt));
     sar.push("Melanjutkan patroli rutin pada jalur dan grid yang sama untuk pemantauan berkala.");
     notes.pembahasan = pem.map((x, i) => `${i + 1}. ${x}`).join("\n");
     notes.kesimpulan = [`Berdasarkan kegiatan ${I.judulLengkap}, dapat disimpulkan sebagai berikut:`, ...kes.map((x, i) => `${i + 1}. ${x}`)].join("\n");
@@ -562,7 +777,7 @@
       { label: "Jumlah catatan harian = jumlah tabel kategori", ok: sumGroups === sumDays, note: `${sumDays} catatan harian, ${sumGroups} di tabel kategori` },
       { label: "Data Model SMART (nama kategori dan jenis)", ok: M.unknown.size === 0, note: M.unknown.size ? `${M.unknown.size} kode belum punya nama` : "semua kode punya nama" },
       { label: "Kemungkinan pencatatan ganda", ok: !M.duplicates.length, note: M.duplicates.length ? M.duplicates.map((a) => `${a[0].species || a[0].catLabel} ${a[0].wp.date} (WP ${a.map((o) => o.wp.id + " " + o.wp.time.substr(0, 5)).join(", ")})`).slice(0, 3).join("; ") + " — periksa, jangan langsung dihapus" : "" },
-      { label: "Judul kegiatan (mandat patroli)", ok: !!(info.judul || M.patrol.mandate), note: `"${I.judul}"` },
+      { label: "Judul kegiatan (mandat patroli)", ok: !!(info.judul || M.patrol.mandate), note: `"${I.judul}"${I.keg ? (I.keg.judul === I.judul ? "" : `; narasi mengikuti judul baku "${I.keg.judul}"`) : "; tidak cocok dengan judul baku, narasi umum dipakai"}` },
       { label: "Nomor dan tanggal Surat Tugas", ok: !!(I.nomorST && I.tanggalST), note: I.nomorST || "ID patroli bukan nomor ST, isi manual" },
       { label: "Scan Surat Tugas untuk lampiran", ok: (scans || []).length > 0, note: (scans || []).length ? `${scans.length} halaman` : "" },
       { label: `DIPA TA.${I.year}`, ok: !!(I.nomorDipa && I.tanggalDipa), note: I.nomorDipa ? I.nomorDipa : "belum ada di data/dipa.json" },
@@ -570,13 +785,14 @@
       { label: "Tanggal pelaksanaan sesuai ST", ok: !!(info.tglMulai && info.tglSelesai), note: `${periodeSd(I.mulai, I.selesai)}${info.tglMulai ? "" : " (sementara dari data SMART)"}` },
       { label: "Nama bergelar dan jabatan anggota", ok: !missingDir.length, note: missingDir.length ? `isi manual: ${missingDir.map((m) => m.smartName).join(", ")}` : "" },
       { label: "Unsur anggota (Balai/Polri/TNI/masyarakat)", ok: !noUnsur.length, note: noUnsur.length ? `pilih unsur: ${noUnsur.map((m) => m.smartName).join(", ")}` : "" },
+      kegTeamCheck(I.keg, M.members),
       { label: "Jumlah alat dan bahan yang digunakan", ok: !alatKosong.length, note: alatKosong.length ? `${alatKosong.length} baris belum diisi jumlahnya` : "" },
       { label: "Kepala Balai dan Kasubbag TU (nama, NIP)", ok: !!(profile.kepalaBalaiNama && profile.kepalaBalaiNip && profile.kasubbagNama && profile.kasubbagNip) },
       { label: "Lapisan grid dan zonasi", ok: (M.hasLayers.grid && M.hasLayers.zonasi) || !!info.grids, note: M.hasLayers.grid ? `grid: ${M.grids.join(", ") || "-"}${M.zonas.length ? "; " + M.zonas.join(", ") : ""}` : info.grids ? "diisi manual" : "" },
       { label: "Tempat dan tanggal penandatanganan", ok: !!info.tanggalLaporan, note: `${I.kota || "…"}, ${info.tanggalLaporan ? tglPanjang(I.tanggalLaporan) : "sementara " + tglPanjang(I.tanggalLaporan)}` },
       { label: "Isian bertanda [ … ] di narasi sudah dilengkapi", ok: !hasPH(notes), note: hasPH(notes) ? "cari teks berlatar kuning bertanda kurung siku" : "" },
       { label: "Narasi sudah diperiksa", ok: !!info.narasiOk, note: "centang setelah teks diperiksa" }
-    ];
+    ].filter(Boolean);
   }
 
   /* ---------- HTML ---------- */
@@ -627,7 +843,7 @@
       ["Pelaksana", `Tim ${teamShort(M.members)}`], ["Jumlah Anggaran", I.anggaran || "Rp……………"],
       ["Sumber Anggaran", I.sumberAnggaran], ["Disusun di", I.kota || "……………"], ["Pada Tanggal", pengesahanTgl]
     ];
-    const front = [kopHtml(balai), titleHtml("LAPORAN", `Pelaksanaan Kegiatan ${I.judulLengkap} ${balai.replace(/^Balai\s+/i, "")}`),
+    const front = [kopHtml(balai), titleHtml("LAPORAN", `Pelaksanaan Kegiatan ${I.judulLengkap}${/tambora/i.test(I.judulLengkap) ? "" : " " + balai.replace(/^Balai\s+/i, "")}`),
       `<table class="kv-plain">${kv.map(([k, v]) => `<tr><td>${esc(k)}</td><td>:</td><td>${esc(v)}</td></tr>`).join("")}</table>
       <table class="sign"><tr><td>${sign(["Menyetujui,", profile.kasubbagJabatan || "Kepala Subbagian Tata Usaha,"], profile.kasubbagNama, profile.kasubbagNip)}</td>
       <td>${sign(["", "Ketua Tim Pelaksana,"], I.penyusun ? I.penyusun.name : "", I.penyusun ? I.penyusun.nip : "")}</td></tr>
@@ -708,7 +924,7 @@
     return { html: `<section class="sec-front">${front.join("\n")}</section>\n<section class="sec-body">${body.join("\n")}</section>`, info: I };
   }
 
-  window.SRGReport = { buildModel, renderHTML, autoNotes, deriveInfo, readiness, periode, periodeSd, tglPanjang, num, hhmm, fmtNip, esc, lines, DAY_COLORS, BIODIV,
+  window.SRGReport = { KEGIATAN, kegiatanOf, kegText, kegTeamCheck, metodeLines, alatFor, judulLengkap, buildModel, renderHTML, autoNotes, deriveInfo, readiness, periode, periodeSd, tglPanjang, num, hhmm, fmtNip, esc, lines, DAY_COLORS, BIODIV,
     sign, noteBlock, terbilang, nTxt, rupiah, rp, numVal, addDays, parseISO, inGeom, BULAN, listText, PH, fixText, sci, nb,
     DEFAULT_DASAR, DEFAULT_METODE, DEFAULT_ALAT, DEFAULT_RAB, DEFAULT_AKUN, UNSUR, UNSUR_GROUPS, guessUnsur, unsurGroup, teamSentence, teamShort, teamTable, alatTable,
     rabRows, rabTable, terbilangRupiah, sumberAnggaran, dasarList, ganttTable, kopHtml, titleHtml, hasPH };

@@ -37,7 +37,8 @@
         <summary><h2><span class="step">2</span> Data kegiatan</h2></summary>
         <p class="muted">Disimpan per nomor Surat Tugas di browser ini.</p>
         <div id="infoForm" class="form">
-          <label class="fld">Judul kegiatan (otomatis dari mandat patroli) <input type="text" id="i_judul" data-info="judul" placeholder="SMART Patrol Rawan Tipihut"></label>
+          <label class="fld">Judul baku kegiatan <select id="i_jenis"></select></label>
+          <label class="fld">Judul kegiatan (otomatis dari mandat patroli; narasi menyesuaikan judul) <input type="text" id="i_judul" data-info="judul" placeholder="SMART Patrol Rawan Tipihut"></label>
           <label class="fld">Nomor Surat Tugas <input type="text" id="i_nomorST" data-info="nomorST" placeholder="ST.380/T.41/TU/DIPA/04/2026"></label>
           <label class="fld">Lokasi (wilayah kerja) <input type="text" id="i_lokasi" data-info="lokasi" placeholder="SPTN Wilayah II Pekat"></label>
           <label class="fld">Tanggal Surat Tugas <input type="date" id="i_tanggalST" data-info="tanggalST"></label>
@@ -165,7 +166,8 @@
         <summary><h2><span class="step">1</span> Data rencana</h2></summary>
         <p class="muted">Diisi manual, terpisah dari LPK. Tersimpan di browser ini sampai Anda memulai RPK baru.</p>
         <div id="rpkForm" class="form">
-          <label class="fld">Judul kegiatan <input type="text" data-rpk="judul" placeholder="SMART Patrol Rawan Tipihut"></label>
+          <label class="fld">Judul baku kegiatan <select id="r_jenis"></select></label>
+          <label class="fld">Judul kegiatan (narasi menyesuaikan judul) <input type="text" id="r_judul" data-rpk="judul" placeholder="SMART Patrol Rawan Tipihut"></label>
           <label class="fld">Nomor Surat Tugas <input type="text" data-rpk="nomorST" placeholder="ST.1167/T.41/TU/DIPA/10/2026"></label>
           <label class="fld">Tanggal Surat Tugas <input type="date" data-rpk="tanggalST"></label>
           <label class="fld">Lokasi (wilayah kerja) <input type="text" data-rpk="lokasi" placeholder="SPTN Wilayah I Kadindi"></label>

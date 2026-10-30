@@ -30,6 +30,21 @@
   const ALAT_COLS = [{ k: "nama", label: "Jenis alat/bahan" }, { k: "jumlah", label: "Jumlah", w: "54px", num: true }, { k: "sat", label: "Satuan", w: "60px" }];
   const rabFooter = (rows) => { const tot = R.rabRows(rows).reduce((s, r) => s + r.total, 0); return `Jumlah anggaran: <b>${R.rupiah(tot) || "Rp0,00"}</b><br><small>${esc(R.terbilangRupiah(tot))}</small>`; };
 
+  /* ---------- Judul baku kegiatan ---------- */
+  // Memilih judul baku mengisi kolom judul (tetap bisa diedit); onPick menerima entri KEGIATAN
+  function bindJudul(select, input, onPick) {
+    select.innerHTML = `<option value="">Pilih judul baku… (atau ketik sendiri di bawah)</option>` + R.KEGIATAN.map((k, i) => `<option value="${k.id}">${i + 1}. ${esc(k.judul)}</option>`).join("");
+    const sync = () => { const k = R.KEGIATAN.find((x) => x.judul === input.value.trim()); select.value = k ? k.id : ""; };
+    select.addEventListener("change", () => {
+      const k = R.KEGIATAN.find((x) => x.id === select.value); if (!k) return;
+      input.value = k.judul; input.dispatchEvent(new Event("input", { bubbles: true })); onPick(k);
+    });
+    input.addEventListener("input", sync);
+    return { sync };
+  }
+  // Alat bawaan judul hanya dipasang bila jumlah alat belum pernah diisi
+  const alatUntouched = (rows) => !rows.some((r) => String(r.jumlah || "").trim());
+
   /* ---------- Unsur anggota ---------- */
   const unsurSelect = (val, attrs) => `<select ${attrs}><option value="">Pilih unsur…</option>${Object.entries(R.UNSUR).map(([k, v]) => `<option value="${k}" ${k === val ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>`;
 
@@ -126,5 +141,5 @@
     };
   }
 
-  window.SRGUI = { rowsEditor, RAB_COLS, ALAT_COLS, rabFooter, unsurSelect, search, bindPicker, scanBox };
+  window.SRGUI = { bindJudul, alatUntouched, rowsEditor, RAB_COLS, ALAT_COLS, rabFooter, unsurSelect, search, bindPicker, scanBox };
 })();
