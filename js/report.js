@@ -98,6 +98,7 @@
     "Keputusan Direktur Jenderal Konservasi Sumber Daya Alam dan Ekosistem Nomor 74 Tahun 2025 tentang Panduan Patroli Berbasis Spatial Monitoring and Reporting Tool (SMART);"
   ].join("\n");
   // Ditambahkan otomatis hanya bila tim melibatkan unsur TNI/Polri
+  const PERMEN_KARHUTLA = "Peraturan Menteri Lingkungan Hidup dan Kehutanan Nomor P.32/MENLHK/SETJEN/KUM.1/3/2016 tentang Pengendalian Kebakaran Hutan dan Lahan;";
   const MOU_TNI = "Nota Kesepahaman antara Kementerian Kehutanan dan Tentara Nasional Indonesia tentang Sinergitas Tugas dan Fungsi Kementerian Kehutanan dan Tentara Nasional Indonesia Nomor PKS.4/MENHUT/SETJEN/KUM.3/2/2025 dan Nomor NK/3/II/2025/TNI tanggal 12 Februari 2025;";
   const MOU_POLRI = "Nota Kesepahaman antara Kementerian Kehutanan dan Kepolisian Negara Republik Indonesia tentang Sinergitas Tugas dan Fungsi di Bidang Pembangunan Kehutanan Nomor PKS.6/MENHUT/SETJEN/KUM.3/2/2025 dan Nomor NK/7/II/2025 tanggal 17 Februari 2025;";
   const DEFAULT_METODE = [
@@ -415,6 +416,8 @@
   };
   function dasarList(profile, I, members) {
     const d = lines(profile.dasarHukum || DEFAULT_DASAR);
+    // Judul kegiatan kebakaran: tambah peraturan pengendalian karhutla bila belum ada di daftar Profil
+    if (((I.keg && I.keg.fire) || isFire(I.judul)) && !d.some((x) => /P\.32\/MENLHK/i.test(x))) d.push(PERMEN_KARHUTLA);
     if (members.some((m) => m.unsur === "tni")) d.push(MOU_TNI);
     if (members.some((m) => m.unsur === "polri")) d.push(MOU_POLRI);
     if (I.nomorDipa) d.push(`Daftar Isian Pelaksanaan Anggaran (DIPA) ${profile.balai || "Balai Taman Nasional Tambora"} Tahun Anggaran ${I.year} Nomor ${I.nomorDipa}${I.tanggalDipa ? ` tanggal ${tglPanjang(I.tanggalDipa)}` : ""};`);
