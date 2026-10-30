@@ -95,6 +95,7 @@
           else if (tag === "B" || tag === "STRONG") runs(c, { ...fmt, bold: true }, out);
           else if (tag === "SMALL") runs(c, { ...fmt, size: (fmt.size || 24) - 2 }, out);
           else if (tag === "I" || tag === "EM") runs(c, { ...fmt, italics: true }, out);
+          else if (tag === "MARK") runs(c, { ...fmt, highlight: "yellow" }, out);
           else runs(c, fmt, out);
         }
       }
@@ -110,6 +111,36 @@
       return m ? numbered(m[1], m[2]) : new D.Paragraph({ alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { firstLine: 720 }, children: [new D.TextRun({ text })] });
     };
 
+    // Narasi: per baris (dipisah <br>) dengan format inline (nama ilmiah miring) tetap terbawa
+    function noteLines(el) {
+      const out = [];
+      let cur = document.createElement("span");
+      const flush = () => { out.push(cur); cur = document.createElement("span"); };
+      const walk = (n) => {
+        for (const c of n.childNodes) {
+          if (c.nodeType === 1 && c.tagName === "BR") flush();
+          else if (c.nodeType === 1 && (c.tagName === "DIV" || c.tagName === "P")) { flush(); walk(c); flush(); }
+          else cur.appendChild(c.cloneNode(true));
+        }
+      };
+      walk(el); flush();
+      return out.filter((x) => x.textContent.trim());
+    }
+    function bodyLineEl(span) {
+      const text = span.textContent.replace(/^\s+/, "");
+      const m = text.match(/^(\d+)[.)]\s+/), a = text.match(/^([a-z])[.)]\s+/), pre = m || a;
+      if (pre) {
+        // buang awalan nomor dari teks pertama; nomor ditulis ulang dengan tab
+        let cut = span.textContent.length - text.length + pre[0].length;
+        const tw = document.createTreeWalker(span, NodeFilter.SHOW_TEXT);
+        for (let n = tw.nextNode(); n && cut > 0; n = tw.nextNode()) { const k = Math.min(cut, n.textContent.length); n.textContent = n.textContent.slice(k); cut -= k; }
+      }
+      const kids = runs(span);
+      if (a) return new D.Paragraph({ alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { left: 1080, hanging: 360 }, children: [new D.TextRun({ text: `${a[1]}.\t` }), ...kids], tabStops: [{ type: D.TabStopType.LEFT, position: 1080 }] });
+      if (m) return new D.Paragraph({ alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { left: 720, hanging: 360 }, children: [new D.TextRun({ text: `${m[1]}.\t` }), ...kids], tabStops: [{ type: D.TabStopType.LEFT, position: 720 }] });
+      return new D.Paragraph({ alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { firstLine: 720 }, children: kids });
+    }
+
     async function imagePara(src, widthPx, opts = {}) {
       const im = await imageData(src, opts.maxPx || 1600, opts.aspect);
       let w = widthPx, h = Math.round((widthPx * im.h) / im.w);
@@ -119,7 +150,7 @@
 
     function dataTable(el) {
       const small = el.classList.contains("detail") || el.classList.contains("gantt");
-      const size = small ? 18 : 20;
+      const size = el.classList.contains("detail") ? 16 : small ? 18 : 20;
       // Lebar kolom mengikuti tata letak di layar, supaya kolom teks tidak terjepit
       const ref = [...el.querySelectorAll("tr")].find((tr) => [...tr.children].every((td) => td.colSpan === 1 && td.rowSpan === 1) && tr.children.length === Math.max(...[...el.querySelectorAll("tr")].map((r) => [...r.children].reduce((a, td) => a + td.colSpan, 0))));
       const px = ref ? [...ref.children].map((td) => td.getBoundingClientRect().width) : [];
@@ -132,16 +163,25 @@
           let ci = 0;
           for (const td of tr.children) {
             if (td.colSpan === 1) {
-              const t = td.textContent.trim();
-              if (td.tagName === "TH") need[ci] = Math.max(need[ci], Math.max(...t.split(/\s+/).map((w) => w.length)) * (size === 18 ? 100 : 115) + 140);
-              else if ((td.classList.contains("r") || td.classList.contains("c")) && t.length <= 16) { need[ci] = Math.max(need[ci], t.length * (size === 18 ? 100 : 115) + 140); fixed[ci] = true; }
+              const t = td.textContent.trim(), longest = Math.max(...td.innerText.split("\n").map((x) => x.trim().length));
+              const cw = size * 5 + 4, word = Math.max(0, ...t.split(/\s+/).map((w) => w.length));
+              if (td.tagName === "TH") need[ci] = Math.max(need[ci], word * (cw + 10) + 140);
+              else if (td.classList.contains("nw") || ((td.classList.contains("r") || td.classList.contains("c")) && t.length <= 16)) { need[ci] = Math.max(need[ci], longest * cw + 140); fixed[ci] = true; }
+              else need[ci] = Math.max(need[ci], Math.min(word, 16) * cw + 140);
             }
             ci += td.colSpan;
           }
         }
         colW = colW.map((w, i) => (fixed[i] ? Math.max(w, need[i]) : w));
-        const fixW = colW.reduce((a, w, i) => a + (fixed[i] ? w : 0), 0), flexW = colW.reduce((a, w, i) => a + (fixed[i] ? 0 : w), 0);
-        if (flexW > 0 && fixW < 7937) colW = colW.map((w, i) => (fixed[i] ? w : Math.max(need[i] || 300, Math.round((w / flexW) * (7937 - fixW)))));
+        // Kolom teks bebas dibagi dari sisa lebar: minimal selebar kata terpanjang, sisanya mengikuti proporsi di layar
+        const fixW = colW.reduce((a, w, i) => a + (fixed[i] ? w : 0), 0), flex = colW.map((_, i) => i).filter((i) => !fixed[i]);
+        const minW = (i) => Math.max(300, need[i] || 0), avail = 7937 - fixW, sumNeed = flex.reduce((a, i) => a + minW(i), 0);
+        if (flex.length && sumNeed <= avail) {
+          const ex = flex.map((i) => Math.max(0, colW[i] - minW(i))), exSum = ex.reduce((a, b) => a + b, 0);
+          flex.forEach((i, k) => (colW[i] = Math.round(minW(i) + (avail - sumNeed) * (exSum ? ex[k] / exSum : 1 / flex.length))));
+        }
+        const s2 = colW.reduce((a, b) => a + b, 0);
+        if (s2 > 7937) colW = colW.map((w) => Math.round((w * 7937) / s2));
       }
       return new D.Table({
         width: { size: 100, type: D.WidthType.PERCENTAGE }, borders,
@@ -152,14 +192,15 @@
             const ci = arr.slice(0, k).reduce((a, x) => a + x.colSpan, 0), w = colW ? colW.slice(ci, ci + td.colSpan).reduce((a, b) => a + b, 0) : 0;
             const head = td.tagName === "TH";
             const align = head || td.classList.contains("c") ? D.AlignmentType.CENTER : td.classList.contains("r") ? D.AlignmentType.RIGHT : D.AlignmentType.LEFT;
-            const fill = td.classList.contains("on") ? "FFC000" : head ? "D9D9D9" : tr.classList.contains("total") ? "F2F2F2" : null;
+            const grp = tr.classList.contains("grp");
+            const fill = td.classList.contains("on") ? "FFC000" : head ? "D9D9D9" : tr.classList.contains("total") ? "F2F2F2" : grp ? "EFEFEF" : null;
             return new D.TableCell({
               width: w ? { size: w, type: D.WidthType.DXA } : undefined,
               columnSpan: td.colSpan > 1 ? td.colSpan : undefined, rowSpan: td.rowSpan > 1 ? td.rowSpan : undefined,
               verticalAlign: D.VerticalAlign.CENTER,
               shading: fill ? { type: D.ShadingType.CLEAR, color: "auto", fill } : undefined,
               margins: { top: 30, bottom: 30, left: 60, right: 60 },
-              children: [new D.Paragraph({ alignment: align, children: runs(td, { size, bold: head || tr.classList.contains("total") || undefined }) })]
+              children: [new D.Paragraph({ alignment: align, children: runs(td, { size, bold: head || grp || tr.classList.contains("total") || undefined }) })]
             });
           })
         }))
@@ -170,7 +211,7 @@
       const kids = [];
       const sg = td.querySelector(".sg");
       if (sg) for (const d of sg.children) {
-        if (d.classList.contains("space")) kids.push(textPara(""), textPara(""), textPara(""));
+        if (d.classList.contains("space")) kids.push(textPara(""), textPara(""));
         else kids.push(textPara(d.textContent.trim(), { alignment: D.AlignmentType.CENTER }, d.classList.contains("nm") ? { bold: true, underline: {} } : {}));
       }
       return new D.TableCell({ borders: noBorders, width: w ? { size: w, type: D.WidthType.DXA } : undefined, columnSpan: td.colSpan > 1 ? td.colSpan : undefined, children: kids.length ? kids : [textPara("")] });
@@ -217,13 +258,15 @@
           new D.TableCell({ borders: noBorders, width: { size: 6827, type: D.WidthType.DXA }, verticalAlign: D.VerticalAlign.CENTER, children: right })] })] }),
           new D.Paragraph({ border: { bottom: { style: D.BorderStyle.THICK, size: 18, color: "000000", space: 1 } }, children: [] }), textPara("")];
       }
+      if (cls.contains("doc-title")) return [...[...el.children].map((c) => para(c, { alignment: D.AlignmentType.CENTER, spacing: { after: 0, line: 360 } }, { bold: true })), textPara("")];
+      if (tag === "P" && cls.contains("fn")) return [para(el, { spacing: { after: 160 } }, { size: 19, italics: true })];
       if (tag === "P" && cls.contains("cap")) return [para(el, { alignment: D.AlignmentType.CENTER, spacing: { before: 120, after: 120 } }, { bold: true })];
       if (tag === "P" && cls.contains("li")) return [para(el, { spacing: { after: 60 } })];
       if (cls.contains("toc")) return [new D.TableOfContents("Daftar Isi", { hyperlink: true, headingStyleRange: "1-2" })];
       if (tag === "H1") return [new D.Paragraph({ heading: D.HeadingLevel.HEADING_1, alignment: D.AlignmentType.CENTER, pageBreakBefore: cls.contains("pb"), spacing: { after: 360, line: 360 }, children: runs(el, { bold: true }) })];
       if (tag === "H2") return [new D.Paragraph({ heading: D.HeadingLevel.HEADING_2, pageBreakBefore: cls.contains("pb"), spacing: { before: 240, after: 120, line: 360 }, children: runs(el, { bold: true }) })];
       if (tag === "H3") return [new D.Paragraph({ heading: D.HeadingLevel.HEADING_3, spacing: { before: 200, after: 80, line: 360 }, indent: { left: 360 }, children: runs(el, { bold: true }) })];
-      if (cls.contains("note")) return el.innerText.split(/\n/).map((l) => l.trim()).filter(Boolean).map(bodyLine);
+      if (cls.contains("note")) return noteLines(el).map(bodyLineEl);
       if (tag === "OL") return [...el.children].map((li, i) => numbered(i + 1, li.textContent.trim()));
       if (tag === "P" && cls.contains("sub")) return [para(el, { spacing: { before: 120, after: 120, line: 360 }, indent: { left: 360 } })];
       if (tag === "P" && cls.contains("para")) return [para(el, { alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { firstLine: 720 } })];
@@ -275,7 +318,7 @@
       for (let i = 0; i < els.length; i++) { onProgress && onProgress(`Menyusun ${label}… ${Math.round((i / els.length) * 100)}%`); out.push(...(await B.block(els[i]))); }
       return out;
     };
-    const coverKids = await conv([cover], "sampul");
+    const coverKids = cover ? await conv([cover], "sampul") : null;
     const frontEls = [...front.children].filter((e) => e !== cover);
     const frontKids = await conv(frontEls, "pengesahan");
     if (frontKids[0] && frontEls[0].tagName === "H1") frontKids[0] = B.textPara("LEMBAR PENGESAHAN", { heading: D.HeadingLevel.HEADING_1, alignment: D.AlignmentType.CENTER, spacing: { after: 360 } }, { bold: true });
@@ -285,10 +328,14 @@
     const footer = (fmt) => ({ default: new D.Footer({ children: [new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [new D.TextRun({ children: [D.PageNumber.CURRENT] })] })] }) });
     const doc = new D.Document({
       creator: "Generator LPK SMART Patrol", title: opts.title || `Laporan ${M.patrol.id}`, styles: docStyles(), features: { updateFields: true },
-      sections: [
+      // Tanpa sampul (format kop + LAPORAN/TENTANG): halaman bernomor urut sejak halaman pertama
+      sections: cover ? [
         { properties: { page: PAGE }, children: coverKids },
         { properties: { page: { ...PAGE, pageNumbers: { start: 1, formatType: D.NumberFormat.LOWER_ROMAN } } }, footers: footer(), children: frontKids },
         { properties: { page: { ...PAGE, pageNumbers: { start: 1, formatType: D.NumberFormat.DECIMAL } } }, footers: footer(), children: bodyKids }
+      ] : [
+        { properties: { page: { ...PAGE, pageNumbers: { start: 1, formatType: D.NumberFormat.DECIMAL } } }, footers: footer(), children: frontKids },
+        { properties: { page: { ...PAGE, pageNumbers: { formatType: D.NumberFormat.DECIMAL } } }, footers: footer(), children: bodyKids }
       ]
     });
     const blob = await D.Packer.toBlob(doc);

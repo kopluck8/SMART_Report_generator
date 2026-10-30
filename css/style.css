@@ -182,7 +182,6 @@ code { font-size: .85em; background: var(--accent-soft); padding: 1px 4px; borde
 .rab-ed th { text-align: left; font-weight: 600; color: var(--muted); padding: 2px; }
 .rab-ed td { padding: 2px; }
 .rab-ed input { width: 100%; min-width: 0; font: inherit; padding: 4px 5px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--text); }
-.rab-ed td:nth-child(1) { width: 62px; } .rab-ed td:nth-child(3) { width: 40px; } .rab-ed td:nth-child(4) { width: 50px; } .rab-ed td:nth-child(5) { width: 78px; } .rab-ed td:nth-child(6) { width: 22px; }
 .warn { color: var(--warn); font-weight: 600; }
 .scans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
 .scan-it { border: 1px solid var(--line); border-radius: 8px; padding: 4px; font-size: .76rem; text-align: center; }
@@ -195,6 +194,16 @@ code { font-size: .85em; background: var(--accent-soft); padding: 1px 4px; borde
 .paper .kop-t .big { font-size: 13pt; }
 .paper p.cap { text-align: center; font-weight: 700; margin: 10px 0 8px; }
 .paper p.li { margin: 2px 0; }
+.paper .doc-title { text-align: center; font-weight: 700; font-size: 12pt; line-height: 1.5; margin: 6px 0 18px; }
+.paper .doc-title p { margin: 0; }
+.paper h2.sec { margin-top: 20px; }
+.paper mark.ph { background: #ffe08a; color: inherit; padding: 0 2px; border-radius: 2px; }
+.paper tr.grp td { background: #efefef; font-weight: 700; }
+.paper td.nw { white-space: nowrap; }
+.paper tr.dup td { background: #fff4e0; }
+.paper p.fn { font-size: 9.5pt; font-style: italic; margin: 2px 0 10px; }
+.mem select { font: inherit; font-size: .76rem; margin-top: 3px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 2px; max-width: 100%; }
+.fld select { font: inherit; font-size: .85rem; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
 .paper table.rab td:nth-child(3) { text-align: left; }
 .paper figure.scan { break-inside: avoid; }
 .paper figure.scan + figure.scan { break-before: page; }
@@ -221,6 +230,7 @@ code { font-size: .85em; background: var(--accent-soft); padding: 1px 4px; borde
   .paper .cover { min-height: 230mm; justify-content: space-between; }
   .paper .note[contenteditable="true"] { background: none; outline: none; padding: 0; }
   .paper .note[contenteditable="true"]:empty::before { content: ""; }
+  .paper tr.dup td { background: none; }
   .paper h1, .paper h2, .paper h3 { break-after: avoid; }
   .paper tr, .paper .photos figure, .paper figure.map, .paper table.sign { break-inside: avoid; }
   .paper thead { display: table-header-group; }

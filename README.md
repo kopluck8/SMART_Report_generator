@@ -4,42 +4,42 @@ Aplikasi web statis (tanpa server) yang mengubah file ekspor patroli **SMART Des
 
 ## Isi laporan
 
-Mengikuti LPK resmi (contoh: ST.380 SPTN II Pekat):
+LPK dan RPK memakai susunan yang sama (sesuai catatan koreksi LPK ST.1336), tanpa sampul dan tanpa format BAB:
 
-- Sampul, Lembar Pengesahan (Kasubbag TU, Tim Kegiatan, Kepala Balai), Daftar Isi.
-- **Bab I Pendahuluan**: latar belakang, maksud dan tujuan, ruang lingkup.
-- **Bab II Pelaksanaan**: dasar hukum (ditambah DIPA dan ST otomatis), waktu dan tempat (tabel harian, jarak dari track GPS), metode, tim pelaksana, tata waktu (gantt).
-- **Bab III Hasil dan Pembahasan**: per kategori (aktivitas manusia, satwa liar, tumbuhan, spesies invasif, ground check, fitur) dengan foto bernomor dan tabel koordinat, grid, zona.
-- **Bab IV Penutup**: kesimpulan, saran, tanda tangan.
-- **Lampiran**: A peta per kategori + peta tracking dengan tata letak informasi peta (bingkai berkoordinat, logo, judul, skala angka dan batang, arah utara, proyeksi, keterangan, sumber data, peta situasi, instansi dan tahun; tanpa kolom tanda tangan) berisi batas kawasan, zonasi (simbologi resmi), resor, jalur, dan grid berlabel Grid ID, B dokumentasi kegiatan, C dokumentasi keanekaragaman hayati. Semua foto diambil dari data patroli.
+- **Halaman pertama**: kop Balai, judul "LAPORAN / TENTANG / Pelaksanaan Kegiatan …" (RPK: "RENCANA PELAKSANAAN KEGIATAN / TENTANG / …"), ringkasan (judul, nomor ST, waktu, lokasi, pelaksana per unsur, jumlah dan sumber anggaran), lalu tanda tangan (LPK: Kepala Subbagian Tata Usaha, Ketua Tim, Kepala Balai; RPK: PPK, Koordinator, Kepala Balai).
+- **A. Pendahuluan**: latar belakang, maksud dan tujuan (tujuan pencegahan karhutla bila ada temuan api), ruang lingkup, dasar (dasar hukum, MoU TNI/Polri bila tim memuat unsur itu, DIPA, Surat Tugas).
+- **B. Pelaksanaan Kegiatan** (RPK: Rencana Pelaksanaan): keadaan lokasi; waktu (LPK membedakan waktu kerja sesuai ST dengan sesi perekaman SMART, jarak darat dan drone dipisah); alat dan bahan (tabel jenis dan jumlah); metode pengumpulan dan analisis data; tim pelaksana dikelompokkan per unsur (Balai/NIP, Polri/NRP, TNI/NRP, MMP-MPA-masyarakat/NIK); anggaran (rincian per MAK, total, terbilang) dan tata waktu.
+- **C. Hasil dan Pembahasan** (LPK): per kategori dengan foto dan tabel koordinat; membedakan jumlah catatan dan titik koordinat unik, menandai catatan ganda (tidak dihapus), dan menjelaskan "Belum ada di daftar aplikasi".
+- **D. Simpulan dan Saran**, **E. Penutup** (RPK: **C. Penutup**).
+- **Lampiran**: LPK A peta, B dokumentasi, C keanekaragaman hayati, D scan Surat Tugas; RPK A peta grid rencana, B scan Surat Tugas.
 
-Semua narasi dibuat otomatis dan bisa diedit langsung di halaman. Panel **Kesiapan data laporan** menunjukkan data apa yang masih kurang sebelum laporan dicetak.
+Narasi dibuat otomatis dan bisa diedit. Bagian yang harus dilengkapi manual ditandai `[ … ]` (disorot kuning) dan muncul di panel **Kesiapan data laporan**, bersama cek konsistensi jumlah, catatan ganda, unsur anggota, rincian anggaran, dan scan ST. Nama ilmiah otomatis dicetak miring; ejaan baku (imbauan, pembaruan, penggembalaan, s.d.) dirapikan.
 
 Ekspor: **PDF** (Cetak), **Word .docx**, isi template Word sendiri, CSV temuan, KML, GeoJSON.
 
-## Tab RPK (Rencana Pelaksanaan Kegiatan)
+## Input bersama LPK dan RPK
 
-Mengikuti contoh RPK SMART Patrol ST.1167: sampul, lembar pengesahan berkop (PPK, Koordinator Kegiatan, Kepala Balai), daftar isi/tabel/gambar, Bab I Pendahuluan, Bab II Rencana Pelaksanaan (dasar hukum, waktu dan tempat, alat dan bahan, metode, tim pelaksana, RAB), Bab III Penutup, dan lampiran. Semua narasi memakai kalimat "akan dilaksanakan" dan bisa diedit langsung di halaman.
-
-- **Data rencana**: judul (bebas), nomor dan tanggal ST, lokasi, tanggal mulai/selesai, nomor grid, tempat dan tanggal penyusunan.
-- **Tim pelaksana**: cari nama/NIP/jabatan dari daftar pegawai (singkatan seperti *polhut* dan *PEH* dikenali), pilih koordinator; anggota di luar daftar (TNI/Polri, MMP, MPA) diisi manual. Urutan tabel mengikuti urutan kepangkatan di file pegawai, anggota manual di akhir.
-- **Pengesahan dan anggaran**: PPK dipilih dari daftar pegawai dan diingat untuk RPK berikutnya; akun anggaran; RAB yang bisa diedit (bawaan mengikuti contoh ST.1167) dengan total dan terbilang otomatis. DIPA diambil dari `data/dipa.json`.
-- **Lampiran**: peta "Rencana Smart Patrol Berbasis Grid" dibuat otomatis dari nomor grid (grid rencana diarsir merah, zona dan resor tiap grid dicek dari lapisan), lalu scan Surat Tugas JPG/PNG/PDF (halaman PDF diubah menjadi gambar dengan pdf.js 3.11.174 dari cdnjs, dimuat hanya saat dibutuhkan).
-- Keluaran: Cetak/Simpan PDF dan Word dengan nama `RPK_<nomor ST>.docx`. Data RPK terpisah dari LPK; yang dipakai bersama hanya Profil Balai, daftar pegawai, dan lapisan peta.
+- **Anggaran**: akun dan rincian per MAK (jenis, volume, satuan, harga). LPK memakai rincian terakhir dari RPK sebagai awal, lalu disimpan per patroli.
+- **Alat dan bahan**: tabel jenis, jumlah, satuan.
+- **Tim**: setiap anggota punya unsur (Balai, Polri, TNI, MMP, MPA, masyarakat). Unsur ditebak dari pangkat (Bripka, Serda, dst.) dan bisa diganti. Di LPK, anggota yang ikut tetapi tidak tercatat di SMART bisa ditambahkan.
+- **Dasar**: satu daftar di Profil, dipakai LPK dan RPK. Profil lama otomatis diperbarui (PP 34/2002 diganti PP 23/2021).
+- **Scan Surat Tugas** JPG/PNG/PDF (pdf.js 3.11.174 dari cdnjs, dimuat hanya saat dibutuhkan).
+- Word disimpan sebagai `LPK_<nomor ST>.docx` dan `RPK_<nomor ST>.docx`.
 
 ## Data yang disiapkan
 
 | Data | Di mana diisi | Keterangan |
 | --- | --- | --- |
 | Ekspor patroli SMART (.zip) | Langkah 1 | Patrol → Export, sertakan attachments. Judul kegiatan diambil dari mandat patroli |
-| Nomor dan tanggal ST, tanggal pelaksanaan sesuai ST, jumlah anggaran, tempat dan tanggal penandatanganan | Langkah 2 | Diisi oleh pembuat laporan, disimpan per ID patroli di browser |
-| Anggota di luar daftar pegawai | Langkah 2 | Muncul otomatis; isi nama, NIP/NIK, pangkat, jabatan sekali saja |
+| Nomor dan tanggal ST, tanggal pelaksanaan sesuai ST, tempat dan tanggal penandatanganan | Langkah 2 | Diisi oleh pembuat laporan, disimpan per ID patroli di browser |
+| Rincian anggaran, alat dan bahan, scan Surat Tugas | Langkah 3 (LPK) / form RPK | Disimpan di browser; LPK per ID patroli |
+| Anggota di luar daftar pegawai | Langkah 2 | Muncul otomatis; isi nama, NIP/NRP/NIK, pangkat, jabatan, unsur sekali saja |
 | DIPA (nomor, tanggal, sumber anggaran) | Bawaan, tetap | `data/dipa.json` per tahun anggaran |
 | Daftar pegawai | Bawaan | `data/pegawai.xlsx`, urutan baris = urutan kepangkatan (dipakai untuk urutan tabel tim). Kolom: Nama, NIP (teks 18 digit), Jabatan, Pangkat/Gol. Kepala Balai dan Kasubbag TU dikenali dari kolom Jabatan |
+| Data Model SMART | Bawaan | Muat ulang di Langkah 5 bila Data Model berubah |
 | Logo dan lapisan peta | Bawaan | `img/logo-tntambora.png` dan `data/*.geojson` |
 
 Semua data bawaan ditanam ke `js/defaults.js` dengan `python3 tools/build_defaults.py`. Jalankan ulang setelah mengganti daftar pegawai, DIPA tahun baru, logo, atau lapisan peta.
-| Data Model SMART | Bawaan | Muat ulang di Langkah 4 bila Data Model berubah |
 
 ## Pasang di GitHub Pages
 
@@ -82,6 +82,7 @@ Label tambahan di luar Data Model (atribut patroli seperti sumber anggaran) ada 
 | `js/export.js` | Word .docx, isi template, CSV, KML, GeoJSON |
 | `js/app.js` | Antarmuka LPK, profil, penyimpanan browser |
 | `js/rpk.js` | Model, narasi, kesiapan data, dan HTML RPK |
-| `js/rpk-app.js` | Tab RPK: form, pencarian pegawai, RAB, peta grid, scan Surat Tugas |
+| `js/ui.js` | Komponen form bersama: tabel RAB/alat, pilihan unsur, pencarian pegawai, scan Surat Tugas |
+| `js/rpk-app.js` | Tab RPK: form, tim, peta grid |
 
-Pustaka dari CDN: JSZip 3.10.1, docx 8.5.0, shpjs 4.0.4, pdf.js 3.11.174 (khusus scan PDF di RPK).
+Pustaka dari CDN: JSZip 3.10.1, docx 8.5.0, shpjs 4.0.4, pdf.js 3.11.174 (khusus scan PDF Surat Tugas).

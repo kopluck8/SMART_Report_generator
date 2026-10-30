@@ -45,24 +45,58 @@
             <label class="fld">Pelaksanaan mulai (sesuai ST) <input type="date" id="i_tglMulai" data-info="tglMulai"></label>
             <label class="fld">Pelaksanaan selesai <input type="date" id="i_tglSelesai" data-info="tglSelesai"></label>
           </div>
-          <label class="fld">Jumlah anggaran (Rp) <input type="text" id="i_anggaran" data-info="anggaran" inputmode="numeric" placeholder="13875000"></label>
-          <p class="fixed" id="dipaInfo"></p>
           <div class="row2">
             <label class="fld">Tempat penandatanganan <input type="text" id="i_tempatTtd" data-info="tempatTtd" placeholder="Dompu"></label>
             <label class="fld">Tanggal penandatanganan <input type="date" id="i_tanggalLaporan" data-info="tanggalLaporan"></label>
           </div>
           <label class="fld">Grid (kosongkan jika memakai lapisan grid) <input type="text" id="i_grids" data-info="grids" placeholder="282, 35, 83, 86, 12"></label>
           <div id="manualBox"></div>
+          <details class="sub-d">
+            <summary>Anggota yang ikut tetapi tidak tercatat di SMART</summary>
+            <p class="muted">Mis. personel TNI/Polri, MMP/MPA, atau masyarakat. Ditampilkan terpisah per unsur di tabel tim.</p>
+            <div class="picker"><input type="search" id="lSearch" placeholder="Cari dari daftar pegawai" autocomplete="off"><div class="pick-list" id="lResults"></div></div>
+            <div class="form" id="lManForm">
+              <label class="fld">Nama <input type="text" data-m="nama" placeholder="Bripka Nama Lengkap"></label>
+              <div class="row2">
+                <label class="fld">NIP / NRP / NIK <input type="text" data-m="nip"></label>
+                <label class="fld">Pangkat/Gol <input type="text" data-m="pangkat" placeholder="-"></label>
+              </div>
+              <label class="fld">Jabatan <input type="text" data-m="jabatan" placeholder="Anggota Polsek Pekat"></label>
+              <label class="fld">Unsur <select data-m="unsur" id="lManUnsur"></select></label>
+              <button class="btn ghost full" id="lManAdd" type="button">Tambahkan ke tim</button>
+            </div>
+            <div id="lExtra" class="team"></div>
+          </details>
           <label class="fld">Penyusun laporan <select id="i_penyusunNip" data-info="penyusunNip"></select></label>
           <label class="fld">Hari penyusunan rencana sebelum patroli <input type="number" id="i_rencanaHari" data-info="rencanaHari" min="0" max="14" value="1"></label>
-          <label class="chk"><input type="checkbox" id="i_narasiOk" data-info="narasiOk"> Narasi Bab I–IV sudah diperiksa</label>
+          <label class="chk"><input type="checkbox" id="i_narasiOk" data-info="narasiOk"> Narasi sudah diperiksa dan isian [ … ] sudah dilengkapi</label>
         </div>
       </details>
     </section>
 
     <section class="card">
+      <details>
+        <summary><h2><span class="step">3</span> Anggaran, alat, dan Surat Tugas</h2></summary>
+        <p class="muted">Sama seperti isian RPK. Disimpan per patroli di browser ini.</p>
+        <label class="fld">Akun anggaran <input type="text" id="i_akun" data-info="akun" placeholder="7273.REA.002.051.A.521219 (PNP)"></label>
+        <p class="fixed" id="dipaInfo"></p>
+        <div class="fld">Rincian anggaran (RAB)
+          <div class="rab-ed" id="lRab"></div>
+          <div class="btnrow"><button class="btn small ghost" id="lRabAdd" type="button">Tambah baris</button><button class="btn small link" id="lRabReset" type="button">Pakai RAB contoh</button></div>
+        </div>
+        <div class="fld">Alat dan bahan yang benar-benar digunakan (isi jumlahnya)
+          <div class="rab-ed" id="lAlat"></div>
+          <div class="btnrow"><button class="btn small ghost" id="lAlatAdd" type="button">Tambah alat</button></div>
+        </div>
+        <label class="btn ghost full" style="margin-top:12px"><input type="file" id="lScanInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" multiple hidden>Unggah scan Surat Tugas (JPG, PNG, PDF)</label>
+        <p class="status" id="lScanStatus"></p>
+        <div id="lScans" class="scans"></div>
+      </details>
+    </section>
+
+    <section class="card">
       <details id="profileBox">
-        <summary><h2><span class="step">3</span> Profil Balai</h2></summary>
+        <summary><h2><span class="step">4</span> Profil Balai</h2></summary>
         <p class="muted">Dipakai untuk semua laporan. Bisa diekspor dan dibagikan ke SPTN lain.</p>
         <label class="fld">Nama Balai <input type="text" id="p_balai" data-prof="balai"></label>
         <label class="fld">Kota penandatanganan bawaan <input type="text" id="p_kota" data-prof="kota" placeholder="Dompu"></label>
@@ -73,8 +107,8 @@
         <button class="btn link" id="resetPegawai" type="button">Pakai daftar pegawai bawaan</button>
         <p class="status" id="pegawaiStatus"></p>
         <p class="muted">Urutan baris = urutan kepangkatan. Kolom yang dibaca: Nama, NIP, Jabatan, Pangkat/Gol. Kepala Balai dan Kasubbag TU dikenali dari kolom Jabatan.</p>
-        <label class="fld">Dasar hukum (satu baris satu aturan; ST dan DIPA ditambahkan otomatis) <textarea id="p_dasarHukum" data-prof="dasarHukum" rows="5"></textarea></label>
-        <label class="fld">Metode kegiatan (satu baris satu poin) <textarea id="p_metode" data-prof="metode" rows="5"></textarea></label>
+        <label class="fld">Dasar (satu baris satu aturan; dipakai LPK dan RPK. DIPA, Surat Tugas, dan nota kesepahaman TNI/Polri ditambahkan otomatis) <textarea id="p_dasarHukum" data-prof="dasarHukum" rows="5"></textarea></label>
+        <label class="fld">Metode pelaksanaan bawaan (satu baris satu poin; dipakai LPK dan RPK) <textarea id="p_metode" data-prof="metode" rows="5"></textarea></label>
         <div class="fld">Lapisan peta (bawaan: batas kawasan, zonasi, resor, jalur, grid). Tambah GeoJSON WGS84 atau shapefile .zip
           <input type="file" id="layerInput" accept=".geojson,.json,.zip">
           <div id="layerList" class="layers"></div>
@@ -91,7 +125,7 @@
 
     <section class="card">
       <details>
-        <summary><h2><span class="step">4</span> Kamus dan template</h2></summary>
+        <summary><h2><span class="step">5</span> Kamus dan template</h2></summary>
         <p class="muted">Nama kategori dan jenis memakai Data Model Balai TN Tambora bawaan. Muat ekspor Data Model yang lebih baru bila ada perubahan.</p>
         <label class="btn ghost full"><input type="file" id="dmInput" accept=".xml,.csv,.txt,.zip" hidden>Muat Data Model (.xml/.zip) atau kamus (.csv)</label>
         <p class="status" id="dictStatus"></p>
@@ -118,7 +152,7 @@
     <section class="ready noprint" id="ready" hidden></section>
     <div id="empty" class="empty noprint">
       <h2>Belum ada data</h2>
-      <p>Muat file ekspor patroli dari SMART Desktop (<i>Patrol → Export</i>, format XML/zip). Laporan disusun mengikuti format LPK: sampul, lembar pengesahan, daftar isi, Bab I–IV, dan lampiran peta serta dokumentasi dari data patroli.</p>
+      <p>Muat file ekspor patroli dari SMART Desktop (<i>Patrol → Export</i>, format XML/zip). Laporan disusun dengan kop, LAPORAN / TENTANG / judul dan pengesahan, lalu A. Pendahuluan sampai E. Penutup, dan lampiran peta, dokumentasi, serta Surat Tugas.</p>
     </div>
     <article id="report" class="paper" hidden></article>
   </section>
@@ -145,7 +179,7 @@
             <label class="fld">Tempat penyusunan <input type="text" data-rpk="tempatTtd" placeholder="Dompu"></label>
             <label class="fld">Tanggal penyusunan <input type="date" data-rpk="tanggalTtd"></label>
           </div>
-          <label class="chk"><input type="checkbox" data-rpk="narasiOk"> Narasi Bab I–III sudah diperiksa</label>
+          <label class="chk"><input type="checkbox" data-rpk="narasiOk"> Narasi sudah diperiksa dan isian [ … ] sudah dilengkapi</label>
         </div>
       </details>
     </section>
@@ -159,7 +193,7 @@
         </div>
         <div id="rTeam" class="team"></div>
         <details class="sub-d">
-          <summary>Tambah anggota di luar daftar pegawai (TNI/Polri, MMP, MPA)</summary>
+          <summary>Tambah anggota di luar daftar pegawai (Polri, TNI, MMP, MPA, masyarakat)</summary>
           <div class="form" id="rManForm">
             <label class="fld">Nama <input type="text" data-m="nama" placeholder="Bripka Nama Lengkap"></label>
             <div class="row2">
@@ -167,6 +201,7 @@
               <label class="fld">Pangkat/Gol <input type="text" data-m="pangkat" placeholder="-"></label>
             </div>
             <label class="fld">Jabatan <input type="text" data-m="jabatan" placeholder="Anggota Polsek Pekat"></label>
+            <label class="fld">Unsur <select data-m="unsur" id="rManUnsur"></select></label>
             <button class="btn ghost full" id="rManAdd" type="button">Tambahkan ke tim</button>
           </div>
         </details>
@@ -175,7 +210,7 @@
 
     <section class="card">
       <details open>
-        <summary><h2><span class="step">3</span> Pengesahan dan anggaran</h2></summary>
+        <summary><h2><span class="step">3</span> Pengesahan, anggaran, dan alat</h2></summary>
         <div class="fld">Pejabat Pembuat Komitmen
           <div class="picker">
             <input type="search" id="rPpkSearch" placeholder="Cari nama PPK" autocomplete="off">
@@ -189,10 +224,14 @@
           <div class="rab-ed" id="rRab"></div>
           <div class="btnrow"><button class="btn small ghost" id="rRabAdd" type="button">Tambah baris</button><button class="btn small link" id="rRabReset" type="button">Pakai RAB contoh</button></div>
         </div>
+        <div class="fld">Alat dan bahan yang akan digunakan
+          <div class="rab-ed" id="rAlat"></div>
+          <div class="btnrow"><button class="btn small ghost" id="rAlatAdd" type="button">Tambah alat</button></div>
+        </div>
         <details class="sub-d">
-          <summary>Dasar hukum RPK</summary>
-          <label class="fld">Satu baris satu aturan; DIPA dan Surat Tugas ditambahkan otomatis <textarea id="rDasar" rows="6"></textarea></label>
-          <button class="btn link" id="rDasarReset" type="button">Pakai dasar hukum bawaan</button>
+          <summary>Dasar (dipakai bersama LPK)</summary>
+          <label class="fld">Satu baris satu aturan; DIPA, Surat Tugas, dan nota kesepahaman TNI/Polri ditambahkan otomatis <textarea id="rDasar" rows="6"></textarea></label>
+          <button class="btn link" id="rDasarReset" type="button">Pakai daftar dasar bawaan</button>
         </details>
       </details>
     </section>
@@ -259,6 +298,7 @@
 <script src="js/map.js"></script>
 <script src="js/report.js"></script>
 <script src="js/export.js"></script>
+<script src="js/ui.js"></script>
 <script src="js/app.js"></script>
 <script src="js/rpk.js"></script>
 <script src="js/rpk-app.js"></script>

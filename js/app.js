@@ -25,33 +25,25 @@
     };
   })();
 
-  const DEFAULT_DASAR = [
-    "Undang-Undang Nomor 5 Tahun 1990 tentang Konservasi Sumber Daya Alam Hayati dan Ekosistemnya juncto Undang-Undang Nomor 32 Tahun 2024 tentang Perubahan atas Undang-Undang Nomor 5 Tahun 1990 tentang Konservasi Sumber Daya Alam Hayati dan Ekosistemnya;",
-    "Undang-Undang Nomor 41 Tahun 1999 tentang Kehutanan sebagaimana telah diubah dengan Undang-Undang Nomor 19 Tahun 2004 tentang Penetapan Peraturan Pemerintah Pengganti Undang-Undang Nomor 1 Tahun 2004 tentang Perubahan atas Undang-Undang Nomor 41 Tahun 1999 tentang Kehutanan menjadi Undang-Undang;",
-    "Undang-Undang Nomor 18 Tahun 2013 tentang Pencegahan dan Pemberantasan Perusakan Hutan;",
-    "Undang-Undang Nomor 6 Tahun 2023 tentang Penetapan Peraturan Pemerintah Pengganti Undang-Undang Nomor 2 Tahun 2022 tentang Cipta Kerja menjadi Undang-Undang;",
-    "Peraturan Pemerintah Nomor 34 Tahun 2002 tentang Tata Hutan dan Penyusunan Rencana Pengelolaan Hutan, Pemanfaatan Hutan dan Penggunaan Kawasan Hutan;",
-    "Peraturan Pemerintah Nomor 45 Tahun 2004 tentang Perlindungan Hutan;",
-    "Surat Keputusan Direktur Jenderal Konservasi Sumber Daya Alam dan Ekosistem Nomor 74 Tahun 2025 tentang Panduan Patroli Berbasis Spatial Monitoring And Reporting Tool (SMART) tanggal 6 Mei 2025;",
-    "Surat Edaran Direktur Jenderal Konservasi Sumber Daya Alam dan Ekosistem Nomor SE.6/KSDAE/PKK/KSA.1/12/2022 tentang Pedoman Pelaksanaan dan Pelaporan Hasil Kegiatan Patroli di Kawasan Konservasi;"
-  ].join("\n");
-  const DEFAULT_METODE = [
-    "Bergerak dari satu tempat ke tempat lain dengan berjalan kaki dan/atau menggunakan kendaraan sesuai dengan target (rencana patroli) yang ditentukan.",
-    "Pembaharuan informasi dan status tim di lapangan disampaikan oleh Ketua Tim Patroli kepada Pimpinan secara berjenjang di setiap kesempatan, minimal 3 hari sekali.",
-    "Jalur dan temuan patroli direkam dalam GPS menggunakan format derajat desimal (Decimal Degree/DD).",
-    "Segala bentuk temuan di lapangan yang terkait dengan aktivitas ilegal, tumbuhan, satwa liar, potensi wisata alam, pal batas kawasan, gejala alam, dan lain-lainnya wajib direkam dengan menggunakan aplikasi SMART Mobile pada smartphone atau secara manual menggunakan alat GPS, kamera, dan buku format pengambilan data. Apabila terdapat kendala pada alat perekaman, dapat dilakukan perekaman manual.",
-    "Melakukan observasi secara menyeluruh dengan radius minimal 20 meter di sekitar temuan aktivitas ilegal atau lokasi yang diduga terdapat aktivitas ilegal atau sesuai kebutuhan.",
-    "Tim melakukan perekaman data secara konsisten, membuat titik jalur, dan melakukan observasi menyeluruh apabila tim tidak menemukan temuan penting dalam jarak 50 meter atau sesuai dengan kondisi patroli.",
-    "Tim juga dapat melakukan pengumpulan data potensi kawasan dan gangguan kawasan, serta data dan informasi lainnya yang dibutuhkan baik yang berada di area hutan maupun sekitar batas luar hutan sesuai dengan data model/struktur data yang ditentukan dalam panduan.",
-    "Hal tersebut dapat berupa temuan manusia, penggunaan kawasan hutan secara tidak sah, perburuan satwa liar, illegal logging, akses jalan, kegiatan pemanenan ilegal, dan lain-lain."
-  ].join("\n");
+  const DEFAULT_DASAR = R.DEFAULT_DASAR, DEFAULT_METODE = R.DEFAULT_METODE;
+  // Profil lama: PP 34/2002 sudah dicabut (PP 6/2007, lalu PP 23/2021); ejaan baku pada metode; dasar RPK disatukan
+  function migrateProfile(P) {
+    if (P.ver >= 2) return P;
+    const oldLpk = /Nomor 34 Tahun 2002/.test(P.dasarHukum || "") && /Nomor 74 Tahun 2025/.test(P.dasarHukum || "") && R.lines(P.dasarHukum).length === 8;
+    if (!P.dasarHukum || oldLpk) P.dasarHukum = DEFAULT_DASAR;
+    else P.dasarHukum = P.dasarHukum.replace(/^.*Nomor 34 Tahun 2002.*$/m, "Peraturan Pemerintah Nomor 23 Tahun 2021 tentang Penyelenggaraan Kehutanan;");
+    P.metode = R.fixText(P.metode || DEFAULT_METODE);
+    delete P.dasarHukumRpk;
+    P.ver = 2;
+    return P;
+  }
   const DEFAULT_PROFILE = {
     balai: "Balai Taman Nasional Tambora", kota: "Dompu", logo: "", pegawai: null,
-    dasarHukum: DEFAULT_DASAR, metode: DEFAULT_METODE, basemap: "satelit"
+    dasarHukum: DEFAULT_DASAR, metode: DEFAULT_METODE, basemap: "satelit", ver: 2
   };
 
   const state = {
-    profile: { ...DEFAULT_PROFILE, ...store.get("profile", {}) },
+    profile: migrateProfile({ ...DEFAULT_PROFILE, ...store.get("profile", {}) }),
     dmDict: store.get("datamodel", null),
     customDict: store.get("customdict", SMART.emptyDict()),
     manual: store.get("manualpegawai", {}),
@@ -90,9 +82,15 @@
     state.mapKey = "";
     const p = state.patrol;
     state.info = store.get("info:" + p.id, {});
+    // Isian yang diseragamkan dengan RPK: RAB (bawaan dari RAB RPK terakhir), alat dan bahan, anggota di luar SMART
+    if (!state.info.rab) state.info.rab = (store.get("rpk:rab", null) || R.DEFAULT_RAB).map((r) => ({ ...r }));
+    if (!state.info.alat) state.info.alat = R.DEFAULT_ALAT.map((r) => ({ ...r }));
+    if (!state.info.extra) state.info.extra = [];
+    await lpkScans.load();
     const nWp = p.legs.reduce((s, l) => s + l.days.reduce((a, d) => a + d.waypoints.length, 0), 0);
     setStatus($("loadStatus"), `✓ ${p.id} · ${nWp} titik · ${photos.size} foto`, "ok");
     fillInfoForm();
+    rabEd.render(); alatEd.render(); renderExtra();
     await rebuild();
   }
 
@@ -239,12 +237,40 @@
     $("i_tempatTtd").placeholder = state.profile.kota || "Dompu";
   }
   let infoTimer;
-  $("infoForm").addEventListener("input", (e) => {
+  document.addEventListener("input", (e) => {
     const el = e.target.closest("[data-info]"); if (!el || !state.patrol) return;
     state.info[el.dataset.info] = el.type === "checkbox" ? el.checked : el.value;
     store.set("info:" + pid(), state.info);
     clearTimeout(infoTimer); infoTimer = setTimeout(rebuild, 500);
   });
+
+  /* ---------- Isian yang sama dengan RPK: anggaran, alat, anggota tambahan, scan ST ---------- */
+  const saveInfo = (now) => { if (!state.patrol) return; store.set("info:" + pid(), state.info); clearTimeout(infoTimer); infoTimer = setTimeout(rebuild, now ? 0 : 600); };
+  const rabEd = SRGUI.rowsEditor($("lRab"), SRGUI.RAB_COLS, () => state.info.rab || [], saveInfo, SRGUI.rabFooter);
+  const alatEd = SRGUI.rowsEditor($("lAlat"), SRGUI.ALAT_COLS, () => state.info.alat || [], saveInfo);
+  $("lRabAdd").addEventListener("click", () => { if (state.patrol) { const l = state.info.rab[state.info.rab.length - 1]; rabEd.add({ mak: l ? l.mak : "", jenis: "", vol: "", sat: "", harga: "" }); } });
+  $("lRabReset").addEventListener("click", () => { if (!state.patrol) return; state.info.rab = R.DEFAULT_RAB.map((r) => ({ ...r })); rabEd.render(); saveInfo(true); });
+  $("lAlatAdd").addEventListener("click", () => { if (state.patrol) alatEd.add({ nama: "", jumlah: "", sat: "unit" }); });
+  // Anggota yang ikut tetapi tidak tercatat di SMART: dari daftar pegawai atau isian manual dengan unsur
+  function renderExtra() {
+    const X = state.info.extra || [];
+    $("lExtra").innerHTML = X.map((m, i) => `<div class="mem"><div class="who"><b>${R.esc(m.nama)}</b><small>${R.esc(m.nip || "-")} · ${R.esc(R.UNSUR[m.unsur] || "")}${m.jabatan ? " · " + R.esc(m.jabatan) : ""}</small></div><button type="button" class="btn link" data-xdel="${i}">Hapus</button></div>`).join("");
+  }
+  function addExtra(m) {
+    if (!state.patrol) return;
+    if (m.nip && state.info.extra.some((x) => x.nip === m.nip)) return;
+    state.info.extra.push(m); renderExtra(); saveInfo(true);
+  }
+  $("lExtra").addEventListener("click", (e) => { const b = e.target.closest("[data-xdel]"); if (!b) return; state.info.extra.splice(Number(b.dataset.xdel), 1); renderExtra(); saveInfo(true); });
+  SRGUI.bindPicker($("lSearch"), $("lResults"), () => pegawaiList(), (p) => addExtra({ nama: p.nama, nip: p.nip, pangkat: p.pangkat, jabatan: p.jabatan, unsur: "balai" }), () => (state.info.extra || []).map((m) => m.nip));
+  $("lManUnsur").innerHTML = SRGUI.unsurSelect("", "").replace(/^<select >|<\/select>$/g, "");
+  $("lManAdd").addEventListener("click", () => {
+    const v = {}; document.querySelectorAll("#lManForm [data-m]").forEach((el) => (v[el.dataset.m] = el.value.trim()));
+    if (!v.nama) { $("lManForm").querySelector("[data-m=nama]").focus(); return; }
+    addExtra({ ...v, unsur: v.unsur || R.guessUnsur(v) || "masyarakat" });
+    document.querySelectorAll("#lManForm [data-m]").forEach((el) => (el.value = ""));
+  });
+  const lpkScans = SRGUI.scanBox({ input: $("lScanInput"), list: $("lScans"), status: $("lScanStatus"), idb, shrink, getKey: () => "lpk:scans:" + pid(), onChange: () => rebuild() });
 
   /* ---------- Daftar pegawai (Excel) ---------- */
   // Membaca .xlsx tanpa pustaka tambahan: xlsx adalah zip berisi XML.
@@ -287,17 +313,18 @@
   // Anggota patroli yang tidak ada di daftar pegawai: isian manual, disimpan per ID SMART
   let manualKey = "";
   function renderManual(M) {
-    const miss = M.members.filter((m) => !m.inDirectory);
+    const miss = M.members.filter((m) => !m.inDirectory && !m.extra);
     const key = miss.map((m) => m.employeeId).join("|");
     if (key === manualKey) return;
     manualKey = key;
     $("manualBox").innerHTML = miss.length ? `<div class="manual"><h3>Anggota di luar daftar pegawai</h3><p class="muted">Isi sekali, tersimpan di browser ini.</p>${miss.map((m) => {
       const v = state.manual[m.employeeId] || {}, id = R.esc(m.employeeId);
       const f = (k, label, ph) => `<label class="fld">${label} <input type="text" data-man="${id}" data-k="${k}" value="${R.esc(v[k] || "")}" placeholder="${R.esc(ph)}"></label>`;
-      return `<div class="who">${R.esc(m.smartName)} <small class="muted">(ID SMART ${id})</small></div>${f("nama", "Nama bergelar", m.smartName)}<div class="row2">${f("nip", "NIP / NIK", m.employeeId)}${f("pangkat", "Pangkat/Gol", "-")}</div>${f("jabatan", "Jabatan", "Masyarakat Mitra Polhut")}`;
+      return `<div class="who">${R.esc(m.smartName)} <small class="muted">(ID SMART ${id})</small></div>${f("nama", "Nama bergelar", m.smartName)}<div class="row2">${f("nip", "NIP / NRP / NIK", m.employeeId)}${f("pangkat", "Pangkat/Gol", "-")}</div>${f("jabatan", "Jabatan", "Anggota Polsek Pekat / MMP")}<label class="fld">Unsur ${SRGUI.unsurSelect(v.unsur || "", `data-man="${id}" data-k="unsur"`)}</label>`;
     }).join("")}</div>` : "";
   }
   let manTimer;
+  $("manualBox").addEventListener("change", (e) => { if (e.target.tagName === "SELECT") e.target.dispatchEvent(new Event("input", { bubbles: true })); });
   $("manualBox").addEventListener("input", (e) => {
     const el = e.target.closest("[data-man]"); if (!el) return;
     const rec = state.manual[el.dataset.man] || (state.manual[el.dataset.man] = {});
@@ -370,7 +397,7 @@
     const list = pegawaiList(), { kb, tu } = pejabat(list);
     return {
       ...state.profile, logo: state.profile.logo || window.SRG_DEFAULT_LOGO || "", pegawai: list, manualPegawai: state.manual,
-      kepalaBalaiNama: kb ? kb.nama : "", kepalaBalaiNip: kb ? kb.nip : "", kasubbagJabatan: "Kepala Sub Bagian Tata Usaha,",
+      kepalaBalaiNama: kb ? kb.nama : "", kepalaBalaiNip: kb ? kb.nip : "", kasubbagJabatan: "Kepala Subbagian Tata Usaha,",
       kasubbagNama: tu ? tu.nama : "", kasubbagNip: tu ? tu.nip : ""
     };
   }
@@ -380,7 +407,7 @@
     if (building) { again = true; return; }
     building = true;
     try {
-      const P = profileView();
+      const P = { ...profileView(), extraMembers: state.info.extra || [] };
       state.model = R.buildModel(state.patrol, dicts(), P, state.layers);
       const M = state.model;
       const I = R.deriveInfo(M, state.info, P);
@@ -413,12 +440,12 @@
         state.mapKey = key;
         busy(P.basemap !== "none" && state.maps.tracking && !state.maps.tracking.tilesOk ? "Peta dasar tidak bisa dimuat (offline atau diblokir); peta dibuat tanpa latar." : "");
       }
-      const r = R.renderHTML(M, P, state.info, state.notes, state.maps, state.photoUrls);
+      const r = R.renderHTML(M, P, state.info, state.notes, state.maps, state.photoUrls, lpkScans.get());
       $("report").innerHTML = r.html;
       $("report").hidden = false; $("empty").hidden = true; $("toolbar").hidden = false;
-      renderReady(R.readiness(M, I, state.info, P));
+      renderReady(R.readiness(M, I, state.info, P, state.notes, lpkScans.get()));
       renderManual(M);
-      $("dipaInfo").innerHTML = I.nomorDipa ? `Sumber anggaran (tetap): <b>${R.esc(I.sumberAnggaran)}</b><br>DIPA Nomor <b>${R.esc(I.nomorDipa)}</b> tanggal <b>${R.esc(R.tglPanjang(I.tanggalDipa))}</b>` : `DIPA TA.${R.esc(I.year)} belum tercatat di data/dipa.json.`;
+      $("dipaInfo").innerHTML = I.nomorDipa ? `Sumber anggaran: <b>${R.esc(I.sumberAnggaran)}</b><br>DIPA Nomor <b>${R.esc(I.nomorDipa)}</b> tanggal <b>${R.esc(R.tglPanjang(I.tanggalDipa))}</b>` : `DIPA TA.${R.esc(I.year)} belum tercatat di data/dipa.json.`;
       $("unknownBtn").hidden = false;
       $("unknownBtn").textContent = M.unknown.size ? `Lengkapi kamus: ${M.unknown.size} kode belum dikenal` : "Edit kamus label";
     } catch (e) { console.error(e); busy("Gagal menyusun laporan: " + e.message); }
@@ -461,7 +488,10 @@
   $("exportDict").addEventListener("click", exportDict);
   $("phBtn").addEventListener("click", showPlaceholders);
   $("printBtn").addEventListener("click", () => window.print());
-  $("docxBtn").addEventListener("click", (e) => withBusy(e.currentTarget, () => SRGExport.docx($("report"), state.model, busy)));
+  $("docxBtn").addEventListener("click", (e) => withBusy(e.currentTarget, () => {
+    const I = R.deriveInfo(state.model, state.info, state.profile);
+    return SRGExport.docx($("report"), state.model, busy, { title: `LPK ${I.judulLengkap} ${I.nomorST}`.trim(), fileName: `LPK_${SRGExport.safeName(I.nomorST || state.model.patrol.id)}.docx` });
+  }));
   $("csvBtn").addEventListener("click", () => SRGExport.csv(state.model));
   $("kmlBtn").addEventListener("click", () => SRGExport.kml(state.model));
   $("geoBtn").addEventListener("click", () => SRGExport.geojson(state.model));
