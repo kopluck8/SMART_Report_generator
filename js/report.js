@@ -641,12 +641,17 @@
       members.push(mem);
     }));
     // Anggota yang ikut tetapi tidak tercatat di SMART (mis. TNI/Polri, MMP/MPA), dari daftar pegawai atau isian manual
+    // Kunci peran: nomor identitas (minimal 5 angka) atau nama; nama kembar tanpa nomor diberi urutan agar perannya tidak tertukar
+    const xKeys = new Set();
     (settings.extraMembers || []).forEach((x, i) => {
       if (!(x.nama || "").trim()) return;
       const id = String(x.nip || "").replace(/\D/g, ""), dir = directory.get(id);
+      let xk = "x:" + (id.length >= 5 && !/^0+$/.test(id) ? id : x.nama.trim());
+      for (let n = 2; xKeys.has(xk); n++) xk = xk.replace(/#\d+$/, "") + "#" + n;
+      xKeys.add(xk);
       members.push({ name: (dir && dir.nama) || x.nama, nip: x.nip || "", jabatan: (dir && dir.jabatan) || x.jabatan || "", pangkat: (dir && dir.pangkat) || x.pangkat || "",
         unsur: dir ? "balai" : x.unsur || guessUnsur(x) || "masyarakat", unsurOk: true, inDirectory: !!dir, manualOk: true, rank: dir ? dir.rank : 2e6 + i, extra: true, smartName: x.nama,
-        key: "x:" + (x.nip || x.nama) });
+        key: xk });
     });
     members.sort((a, b) => unsurGroup(a.unsur) - unsurGroup(b.unsur) || a.rank - b.rank);
     const leader = members.find((m) => m.isLeader);

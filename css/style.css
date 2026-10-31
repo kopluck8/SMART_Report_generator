@@ -280,3 +280,6 @@ code { font-size: .85em; background: var(--accent-soft); padding: 1px 4px; borde
 .rab-ed select { width: 100%; min-width: 0; font: inherit; padding: 4px 5px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--text); }
 .pick.manual-pick { border-top: 1px dashed var(--line); margin-top: 2px; }
 .pick.manual-pick b { color: var(--accent); }
+.man-msg { font-size: .78rem; color: var(--muted); margin: 6px 0 0; min-height: 0; }
+.man-msg:empty { display: none; }
+.man-msg.err { color: var(--warn); font-weight: 600; }

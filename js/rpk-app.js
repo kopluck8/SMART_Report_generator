@@ -63,10 +63,13 @@
     });
   }
   function ensureKoordinator() { if (D.team.length && !D.team.some((m) => m.koordinator)) D.team[0].koordinator = true; }
-  function addMember(m) {
-    if (m.nip && D.team.some((x) => x.nip === m.nip)) return;
-    D.team.push({ nama: m.nama, nip: m.nip || "", pangkat: m.pangkat || "", jabatan: m.jabatan || "", unsur: m.unsur || "", manual: !!m.manual, koordinator: false });
+  function addMember(m, msgEl) {
+    const c = U.memberCheck(D.team, m);
+    U.showMsg(msgEl, c);
+    if (!c.ok) return false;
+    D.team.push({ nama: m.nama, nip: U.cleanId(m.nip), pangkat: m.pangkat || "", jabatan: m.jabatan || "", unsur: m.unsur || "", manual: !!m.manual, koordinator: false });
     ensureKoordinator(); saveDraft(); renderTeam(); rebuild();
+    return true;
   }
   function renderTeam() {
     const T = teamWithRank().sort((a, b) => R.unsurGroup(a.unsur) - R.unsurGroup(b.unsur) || a.rank - b.rank);
@@ -92,15 +95,14 @@
     ensureKoordinator(); saveDraft(); renderTeam(); rebuild();
   });
   // Nama yang tidak ada di daftar pegawai langsung dibawa ke isian manual
-  U.bindPicker($("rSearch"), $("rResults"), () => A.pegawaiList(), (p) => addMember(p), () => D.team.map((m) => m.nip), (q) => {
+  U.bindPicker($("rSearch"), $("rResults"), () => A.pegawaiList(), (p) => addMember(p), () => D.team.map((m) => m.nip).filter(Boolean), (q) => {
     $("rManBox").open = true; $("rManForm").querySelector("[data-m=nama]").value = q; $("rManForm").querySelector("[data-m=nip]").focus();
   });
   $("rManUnsur").innerHTML = U.unsurSelect("", "").replace(/^<select >|<\/select>$/g, "");
   $("rManAdd").addEventListener("click", () => {
     const v = {}; document.querySelectorAll("#rManForm [data-m]").forEach((el) => (v[el.dataset.m] = el.value.trim()));
     if (!v.nama) { $("rManForm").querySelector("[data-m=nama]").focus(); return; }
-    addMember({ ...v, unsur: v.unsur || R.guessUnsur(v) || "masyarakat", manual: true });
-    document.querySelectorAll("#rManForm [data-m]").forEach((el) => (el.value = ""));
+    if (addMember({ ...v, unsur: v.unsur || R.guessUnsur(v) || "masyarakat", manual: true }, $("rManMsg"))) U.resetManual($("rManForm"));
   });
 
   /* ---------- Pejabat Pembuat Komitmen ---------- */

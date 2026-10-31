@@ -83,6 +83,22 @@
     });
   }
 
+  /* ---------- Anggota isian manual ---------- */
+  // Nomor identitas dianggap ada bila berisi minimal 5 angka; "-", "0", atau kosong berarti tanpa nomor
+  const idDigits = (v) => { const d = String(v || "").replace(/\D/g, ""); return d.length >= 5 && !/^0+$/.test(d) ? d : ""; };
+  const cleanId = (v) => (idDigits(v) ? String(v).trim() : "");
+  // Anggota ditolak hanya bila nomor identitasnya sudah ada di tim; nama yang sama cukup diberi catatan
+  function memberCheck(team, m) {
+    const id = idDigits(m.nip), nm = String(m.nama || "").trim().toLowerCase();
+    const sameId = id ? team.find((x) => idDigits(x.nip) === id) : null;
+    if (sameId) return { ok: false, msg: `Nomor ${String(m.nip).trim()} sudah dipakai ${sameId.nama} di tim. Periksa kembali nomornya, atau kosongkan bila tidak ada.` };
+    const sameName = team.some((x) => String(x.nama || "").trim().toLowerCase() === nm);
+    return { ok: true, msg: sameName ? `${m.nama} ditambahkan. Nama yang sama sudah ada di tim; hapus salah satu bila dobel.` : `${m.nama} ditambahkan ke tim.` };
+  }
+  function showMsg(el, c) { if (!el) return; el.textContent = c.msg; el.classList.toggle("err", !c.ok); }
+  // Setelah berhasil ditambahkan, hanya nama dan nomor yang dikosongkan: jabatan, pangkat, dan unsur dipakai lagi untuk anggota berikutnya
+  function resetManual(form) { form.querySelectorAll("[data-m=nama], [data-m=nip]").forEach((el) => (el.value = "")); form.querySelector("[data-m=nama]").focus(); }
+
   /* ---------- Peran dalam tim ---------- */
   const peranSelect = (val, attrs) => `<select ${attrs}>${R.PERAN.map((p) => `<option${p.k === val ? " selected" : ""}>${esc(p.k)}</option>`).join("")}</select>`;
 
@@ -198,5 +214,5 @@
     };
   }
 
-  window.SRGUI = { bindJudul, alatUntouched, rowsEditor, RAB_COLS, ALAT_COLS, rabFooter, unsurSelect, peranSelect, factsForm, search, bindPicker, scanBox };
+  window.SRGUI = { bindJudul, alatUntouched, rowsEditor, RAB_COLS, ALAT_COLS, rabFooter, unsurSelect, peranSelect, factsForm, search, bindPicker, scanBox, idDigits, cleanId, memberCheck, showMsg, resetManual };
 })();

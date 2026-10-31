@@ -284,20 +284,22 @@
     const X = state.info.extra || [];
     $("lExtra").innerHTML = X.map((m, i) => `<div class="mem"><div class="who"><b>${R.esc(m.nama)}</b><small>${R.esc(m.nip || "-")} · ${R.esc(R.UNSUR[m.unsur] || "")}${m.jabatan ? " · " + R.esc(m.jabatan) : ""}</small></div><button type="button" class="btn link" data-xdel="${i}">Hapus</button></div>`).join("");
   }
-  function addExtra(m) {
-    if (!state.patrol) return;
-    if (m.nip && state.info.extra.some((x) => x.nip === m.nip)) return;
-    state.info.extra.push(m); renderExtra(); saveInfo(true);
+  function addExtra(m, msgEl) {
+    if (!state.patrol) return false;
+    const c = SRGUI.memberCheck(state.info.extra, m);
+    SRGUI.showMsg(msgEl, c);
+    if (!c.ok) return false;
+    state.info.extra.push({ ...m, nip: SRGUI.cleanId(m.nip) }); renderExtra(); saveInfo(true);
+    return true;
   }
   $("lExtra").addEventListener("click", (e) => { const b = e.target.closest("[data-xdel]"); if (!b) return; state.info.extra.splice(Number(b.dataset.xdel), 1); renderExtra(); saveInfo(true); });
-  SRGUI.bindPicker($("lSearch"), $("lResults"), () => pegawaiList(), (p) => addExtra({ nama: p.nama, nip: p.nip, pangkat: p.pangkat, jabatan: p.jabatan, unsur: "balai" }), () => (state.info.extra || []).map((m) => m.nip),
+  SRGUI.bindPicker($("lSearch"), $("lResults"), () => pegawaiList(), (p) => addExtra({ nama: p.nama, nip: p.nip, pangkat: p.pangkat, jabatan: p.jabatan, unsur: "balai" }), () => (state.info.extra || []).map((m) => m.nip).filter(Boolean),
     (q) => { const n = $("lManForm").querySelector("[data-m=nama]"); n.value = q; $("lManForm").querySelector("[data-m=nip]").focus(); });
   $("lManUnsur").innerHTML = SRGUI.unsurSelect("", "").replace(/^<select >|<\/select>$/g, "");
   $("lManAdd").addEventListener("click", () => {
     const v = {}; document.querySelectorAll("#lManForm [data-m]").forEach((el) => (v[el.dataset.m] = el.value.trim()));
     if (!v.nama) { $("lManForm").querySelector("[data-m=nama]").focus(); return; }
-    addExtra({ ...v, unsur: v.unsur || R.guessUnsur(v) || "masyarakat" });
-    document.querySelectorAll("#lManForm [data-m]").forEach((el) => (el.value = ""));
+    if (addExtra({ ...v, unsur: v.unsur || R.guessUnsur(v) || "masyarakat" }, $("lManMsg"))) SRGUI.resetManual($("lManForm"));
   });
   const lpkScans = SRGUI.scanBox({ input: $("lScanInput"), list: $("lScans"), status: $("lScanStatus"), idb, shrink, getKey: () => "lpk:scans:" + pid(), onChange: () => rebuild() });
 
