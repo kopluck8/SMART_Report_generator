@@ -73,14 +73,16 @@
     $("rTeam").innerHTML = T.length ? `<p class="muted">${esc(R.teamSentence(T.map((m) => ({ ...m, name: m.nama }))))} Pilih koordinator kegiatan.</p>` + T.map((m) => `<div class="mem">
       <label class="koord" title="Koordinator kegiatan"><input type="radio" name="rKoord" data-i="${m.i}" ${m.koordinator ? "checked" : ""}> Koordinator</label>
       <div class="who"><b>${esc(m.nama)}</b><small>${esc(m.nip ? R.fmtNip(m.nip) : "-")}${m.jabatan ? " · " + esc(m.jabatan) : ""}</small>
-      ${m.manual ? U.unsurSelect(m.unsur, `data-unsur="${m.i}" aria-label="Unsur ${esc(m.nama)}"`) : `<small>${esc(R.UNSUR.balai)}</small>`}</div>
+      ${m.manual ? U.unsurSelect(m.unsur, `data-unsur="${m.i}" aria-label="Unsur ${esc(m.nama)}"`) : `<small>${esc(R.UNSUR.balai)}</small>`}
+      <label class="peran-l">Peran ${U.peranSelect(m.peran || R.defaultPeran(m, { fire: !!(rs.I && rs.I.fire) }), `data-peran="${m.i}" aria-label="Peran ${esc(m.nama)}"`)}</label></div>
       <button type="button" class="btn link" data-del="${m.i}" aria-label="Hapus ${esc(m.nama)}">Hapus</button></div>`).join("")
       : `<p class="muted">Belum ada anggota. Ketik nama di kotak pencarian lalu klik untuk menambahkan.</p>`;
   }
   $("rTeam").addEventListener("change", (e) => {
-    const r = e.target.closest("[name=rKoord]"), u = e.target.closest("[data-unsur]");
-    if (r) D.team.forEach((m, i) => (m.koordinator = i === Number(r.dataset.i)));
+    const r = e.target.closest("[name=rKoord]"), u = e.target.closest("[data-unsur]"), p = e.target.closest("[data-peran]");
+    if (r) { D.team.forEach((m, i) => (m.koordinator = i === Number(r.dataset.i))); renderTeam(); }
     else if (u) { D.team[Number(u.dataset.unsur)].unsur = u.value; renderTeam(); }
+    else if (p) D.team[Number(p.dataset.peran)].peran = p.value;
     else return;
     saveDraft(); rebuild();
   });
@@ -89,7 +91,10 @@
     D.team.splice(Number(b.dataset.del), 1);
     ensureKoordinator(); saveDraft(); renderTeam(); rebuild();
   });
-  U.bindPicker($("rSearch"), $("rResults"), () => A.pegawaiList(), (p) => addMember(p), () => D.team.map((m) => m.nip));
+  // Nama yang tidak ada di daftar pegawai langsung dibawa ke isian manual
+  U.bindPicker($("rSearch"), $("rResults"), () => A.pegawaiList(), (p) => addMember(p), () => D.team.map((m) => m.nip), (q) => {
+    $("rManBox").open = true; $("rManForm").querySelector("[data-m=nama]").value = q; $("rManForm").querySelector("[data-m=nip]").focus();
+  });
   $("rManUnsur").innerHTML = U.unsurSelect("", "").replace(/^<select >|<\/select>$/g, "");
   $("rManAdd").addEventListener("click", () => {
     const v = {}; document.querySelectorAll("#rManForm [data-m]").forEach((el) => (v[el.dataset.m] = el.value.trim()));
@@ -171,8 +176,10 @@
         rs.mapKey = key;
       }
       $("rpkReport").innerHTML = K.render(I, P, rs.notes, rs.map);
+      const wsel = $("r_wilayah");
+      if (wsel.options.length) wsel.options[0].textContent = I.auto ? `Otomatis: ${SRGWilayah.detectLabel(I.auto).replace("titik", "grid")}` : "Otomatis dari grid rencana (isi nomor grid)";
       renderReady(K.readiness(I, D.info, P, I.scans, rs.notes));
-      $("rGridInfo").innerHTML = !I.grids.length ? "Peta lampiran dibuat dari grid ini." : I.gridInfo.map((g) => `Grid <b>${esc(g.grid)}</b>${g.zona ? " · " + esc(g.zona) : ""}${g.resort ? " · Resor " + esc(g.resort) : ""}`).join("<br>")
+      $("rGridInfo").innerHTML = !I.grids.length ? "Peta kerja dan wilayah kerja otomatis dibuat dari grid ini." : I.gridInfo.map((g) => `Grid <b>${esc(g.grid)}</b>${g.zona ? " · " + esc(g.zona) : ""}${g.resort ? " · Resor " + esc(g.resort) : ""}${g.sptn ? ` (${esc(g.sptn)})` : ""}`).join("<br>")
         + (I.notFound.length ? `<br><span class="warn">Tidak ada di lapisan grid: ${esc(I.notFound.join(", "))}</span>` : "");
       $("rDipaInfo").innerHTML = I.nomorDipa ? `Sumber anggaran: <b>${esc(I.sumberAnggaran)}</b><br>DIPA Nomor <b>${esc(I.nomorDipa)}</b> tanggal <b>${esc(R.tglPanjang(I.tanggalDipa))}</b>` : `DIPA TA.${esc(I.year)} belum tercatat di data/dipa.json.`;
     } catch (e) { console.error(e); busy("Gagal menyusun RPK: " + e.message); }
@@ -204,8 +211,11 @@
     $("rToolbar").prepend(note);
   }
 
+  window.addEventListener("srg:profil", () => rebuild());
+
   /* ---------- Mulai ---------- */
   (async () => {
+    if (window.SRGWilayah) $("r_wilayah").innerHTML = SRGWilayah.selectHtml(D.info.wilayah || "", "Otomatis dari grid rencana");
     if (!rs.ppk) { const g = guessPpk(); if (g) rs.ppk = { nama: g.nama, nip: g.nip }; }
     // Draft lama: unsur anggota manual ditebak dari jabatan/pangkat
     D.team.forEach((m) => { if (m.manual && !m.unsur) m.unsur = R.guessUnsur(m) || "masyarakat"; });

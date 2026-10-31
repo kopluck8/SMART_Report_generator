@@ -39,7 +39,9 @@
   }
   const DEFAULT_PROFILE = {
     balai: "Balai Taman Nasional Tambora", kota: "Dompu", logo: "", pegawai: null,
-    dasarHukum: DEFAULT_DASAR, metode: DEFAULT_METODE, basemap: "satelit", ver: 2
+    dasarHukum: DEFAULT_DASAR, metode: DEFAULT_METODE, basemap: "satelit", ver: 2,
+    // Pejabat penandatangan: status Plt./Plh. dan nama pengganti bila berbeda dari daftar pegawai
+    kbStatus: "", kbNama: "", kbNip: "", tuStatus: "", tuNama: "", tuNip: "", tuJabatan: "", alamat: "", kontak: ""
   };
 
   const state = {
@@ -89,6 +91,8 @@
     await lpkScans.load();
     const nWp = p.legs.reduce((s, l) => s + l.days.reduce((a, d) => a + d.waypoints.length, 0), 0);
     setStatus($("loadStatus"), `✓ ${p.id} · ${nWp} titik · ${photos.size} foto`, "ok");
+    if (!state.info.facts) state.info.facts = {};
+    factsEd.reset(); peranSig = "";
     fillInfoForm();
     rabEd.render(); alatEd.render(); renderExtra();
     await rebuild();
@@ -99,6 +103,12 @@
   function dictSummary() {
     const c = Object.keys(state.customDict.items).length;
     setStatus($("dictStatus"), (state.dmDict ? "✓ Data Model termuat dari file Anda. " : "Memakai Data Model Balai TN Tambora bawaan. ") + (c ? `${c} nama tambahan Anda.` : ""), "ok");
+  }
+  // Saran nama satwa untuk tabel kamera jebak dari Data Model
+  function fillSatwaList() {
+    const names = new Set();
+    for (const d of dicts()) for (const [k, v] of Object.entries((d && d.items) || {})) if (/^jenissatwa\|[^.]+\.[^.]+/.test(k) && v) names.add(v);
+    $("satwaList").innerHTML = [...names].sort((a, b) => a.localeCompare(b, "id")).map((n) => `<option value="${R.esc(n)}">`).join("");
   }
   async function loadDict(file) {
     try {
@@ -112,7 +122,7 @@
       const d = isXml ? SMART.parseDataModelXML(text) : SMART.parseDictionaryCSV(text);
       if (isXml) { state.dmDict = d; store.set("datamodel", d); }
       else { for (const k of ["items", "categories", "attributes"]) Object.assign(state.customDict[k], d[k]); store.set("customdict", state.customDict); }
-      dictSummary();
+      dictSummary(); fillSatwaList();
       if (state.patrol) await rebuild();
     } catch (e) { setStatus($("dictStatus"), e.message, "err"); }
   }
@@ -227,13 +237,13 @@
     const members = [];
     M0.legs.forEach((l) => l.members.forEach((m) => { if (!members.find((x) => x.employeeId === m.employeeId)) members.push(m); }));
     $("i_penyusunNip").innerHTML = `<option value="">Ketua tim</option>` + members.map((m) => `<option value="${R.esc(m.employeeId)}">${R.esc(m.givenName === m.familyName ? m.givenName : m.givenName + " " + m.familyName)}</option>`).join("");
+    if (window.SRGWilayah) $("i_wilayah").innerHTML = SRGWilayah.selectHtml(state.info.wilayah || "", "Otomatis dari titik patroli");
     for (const el of document.querySelectorAll("[data-info]")) {
       const v = state.info[el.dataset.info];
       if (el.type === "checkbox") el.checked = !!v; else el.value = v ?? (el.dataset.info === "rencanaHari" ? 1 : "");
     }
     $("i_judul").placeholder = M0.mandate || "SMART Patrol";
     lJudul.sync();
-    $("i_lokasi").placeholder = M0.station || "";
     $("i_nomorST").placeholder = /^ST\.|\/T\.\d+\//i.test(M0.id) ? M0.id : "ID patroli: " + M0.id + " (isi nomor ST)";
     $("i_tempatTtd").placeholder = state.profile.kota || "Dompu";
   }
@@ -255,6 +265,20 @@
   $("lRabAdd").addEventListener("click", () => { if (state.patrol) { const l = state.info.rab[state.info.rab.length - 1]; rabEd.add({ mak: l ? l.mak : "", jenis: "", vol: "", sat: "", harga: "" }); } });
   $("lRabReset").addEventListener("click", () => { if (!state.patrol) return; state.info.rab = R.DEFAULT_RAB.map((r) => ({ ...r })); rabEd.render(); saveInfo(true); });
   $("lAlatAdd").addEventListener("click", () => { if (state.patrol) alatEd.add({ nama: "", jumlah: "", sat: "unit" }); });
+  // Isian lapangan: pilihan baku sesuai judul dan data patroli; isian kosong tidak ditulis di narasi
+  const factsEd = SRGUI.factsForm($("lFacts"), () => state.info.facts || (state.info.facts = {}), (now) => saveInfo(now));
+  // Peran anggota dalam tim (bawaan dari ketua tim, unsur, dan judul kegiatan)
+  let peranSig = "";
+  function renderPeran(M, I) {
+    const sig = M.members.map((m) => `${m.key}:${m.name}:${I.peranOf(m)}`).join("|");
+    if (sig === peranSig) return;
+    peranSig = sig;
+    $("lPeran").innerHTML = M.members.map((m) => `<div class="peran-row"><span class="who"><b>${R.esc(m.name)}</b><small>${R.esc(R.UNSUR[m.unsur] || "")}</small></span>${SRGUI.peranSelect(I.peranOf(m), `data-peran="${R.esc(m.key)}" aria-label="Peran ${R.esc(m.name)}"`)}</div>`).join("");
+  }
+  $("lPeran").addEventListener("change", (e) => {
+    const sel = e.target.closest("[data-peran]"); if (!sel || !state.patrol) return;
+    (state.info.peran || (state.info.peran = {}))[sel.dataset.peran] = sel.value; saveInfo(true);
+  });
   // Anggota yang ikut tetapi tidak tercatat di SMART: dari daftar pegawai atau isian manual dengan unsur
   function renderExtra() {
     const X = state.info.extra || [];
@@ -266,7 +290,8 @@
     state.info.extra.push(m); renderExtra(); saveInfo(true);
   }
   $("lExtra").addEventListener("click", (e) => { const b = e.target.closest("[data-xdel]"); if (!b) return; state.info.extra.splice(Number(b.dataset.xdel), 1); renderExtra(); saveInfo(true); });
-  SRGUI.bindPicker($("lSearch"), $("lResults"), () => pegawaiList(), (p) => addExtra({ nama: p.nama, nip: p.nip, pangkat: p.pangkat, jabatan: p.jabatan, unsur: "balai" }), () => (state.info.extra || []).map((m) => m.nip));
+  SRGUI.bindPicker($("lSearch"), $("lResults"), () => pegawaiList(), (p) => addExtra({ nama: p.nama, nip: p.nip, pangkat: p.pangkat, jabatan: p.jabatan, unsur: "balai" }), () => (state.info.extra || []).map((m) => m.nip),
+    (q) => { const n = $("lManForm").querySelector("[data-m=nama]"); n.value = q; $("lManForm").querySelector("[data-m=nip]").focus(); });
   $("lManUnsur").innerHTML = SRGUI.unsurSelect("", "").replace(/^<select >|<\/select>$/g, "");
   $("lManAdd").addEventListener("click", () => {
     const v = {}; document.querySelectorAll("#lManForm [data-m]").forEach((el) => (v[el.dataset.m] = el.value.trim()));
@@ -310,9 +335,10 @@
     };
   }
   function renderPegawaiInfo() {
-    const list = pegawaiList(), { kb, tu } = pejabat(list);
-    if (!list.length) { $("pegawaiInfo").innerHTML = `<b>Belum ada daftar pegawai.</b> Impor file pegawai .xlsx sekali di browser ini.`; return; }
-    $("pegawaiInfo").innerHTML = `Daftar pegawai: <b>${list.length} orang</b> (${state.profile.pegawai ? "hasil impor" : "bawaan"}).<br>Kepala Balai: <b>${R.esc(kb ? kb.nama : "tidak ditemukan")}</b><br>Kasubbag TU: <b>${R.esc(tu ? tu.nama : "tidak ditemukan")}</b>`;
+    const list = pegawaiList(), V = profileView();
+    const who = (jab, nama) => `${R.esc(jab.replace(/,$/, ""))}: <b>${R.esc(nama || "tidak ditemukan")}</b>`;
+    $("pegawaiInfo").innerHTML = (list.length ? `Daftar pegawai: <b>${list.length} orang</b> (${state.profile.pegawai ? "hasil impor" : "bawaan"}).` : `<b>Belum ada daftar pegawai.</b> Impor file pegawai .xlsx sekali di browser ini.`)
+      + `<br>${who(V.kepalaBalaiJabatan, V.kepalaBalaiNama)}<br>${who(V.kasubbagJabatan, V.kasubbagNama)}`;
   }
   // Anggota patroli yang tidak ada di daftar pegawai: isian manual, disimpan per ID SMART
   let manualKey = "";
@@ -323,8 +349,8 @@
     manualKey = key;
     $("manualBox").innerHTML = miss.length ? `<div class="manual"><h3>Anggota di luar daftar pegawai</h3><p class="muted">Isi sekali, tersimpan di browser ini.</p>${miss.map((m) => {
       const v = state.manual[m.employeeId] || {}, id = R.esc(m.employeeId);
-      const f = (k, label, ph) => `<label class="fld">${label} <input type="text" data-man="${id}" data-k="${k}" value="${R.esc(v[k] || "")}" placeholder="${R.esc(ph)}"></label>`;
-      return `<div class="who">${R.esc(m.smartName)} <small class="muted">(ID SMART ${id})</small></div>${f("nama", "Nama bergelar", m.smartName)}<div class="row2">${f("nip", "NIP / NRP / NIK", m.employeeId)}${f("pangkat", "Pangkat/Gol", "-")}</div>${f("jabatan", "Jabatan", "Anggota Polsek Pekat / MMP")}<label class="fld">Unsur ${SRGUI.unsurSelect(v.unsur || "", `data-man="${id}" data-k="unsur"`)}</label>`;
+      const f = (k, label, ph, list) => `<label class="fld">${label} <input type="text" data-man="${id}" data-k="${k}" value="${R.esc(v[k] || "")}" placeholder="${R.esc(ph)}"${list ? ` list="${list}"` : ""}></label>`;
+      return `<div class="who">${R.esc(m.smartName)} <small class="muted">(ID SMART ${id})</small></div>${f("nama", "Nama bergelar", m.smartName)}<div class="row2">${f("nip", "NIP / NRP / NIK", m.employeeId)}${f("pangkat", "Pangkat/Gol", "-", "dlPangkat")}</div>${f("jabatan", "Jabatan", "Anggota Polsek Pekat / MMP", "dlJabatan")}<label class="fld">Unsur ${SRGUI.unsurSelect(v.unsur || "", `data-man="${id}" data-k="unsur"`)}</label>`;
     }).join("")}</div>` : "";
   }
   let manTimer;
@@ -375,6 +401,7 @@
     document.querySelectorAll("[data-prof]").forEach((el) => el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
       P[el.dataset.prof] = el.value; store.set("profile", P);
       if (el.dataset.prof === "basemap") state.mapKey = "";
+      if (/^(kb|tu)/.test(el.dataset.prof)) renderPegawaiInfo();
       clearTimeout(t); t = setTimeout(rebuild, 500);
     }));
     $("p_logo").addEventListener("change", async (e) => { const f = e.target.files[0]; if (!f) return; P.logo = await shrink(f, 400); store.set("profile", P); rebuild(); });
@@ -397,12 +424,17 @@
 
   /* ---------- Membangun laporan ---------- */
   // Profil lengkap untuk laporan: logo bawaan, daftar pegawai, Kepala Balai dan Kasubbag TU
+  // Pejabat dari daftar pegawai; nama pengganti dan status Plt./Plh. di Profil Balai diutamakan
   function profileView() {
-    const list = pegawaiList(), { kb, tu } = pejabat(list);
+    const P = state.profile, list = pegawaiList(), { kb, tu } = pejabat(list);
+    const pre = (st) => (st ? st + " " : "");
     return {
-      ...state.profile, logo: state.profile.logo || window.SRG_DEFAULT_LOGO || "", pegawai: list, manualPegawai: state.manual,
-      kepalaBalaiNama: kb ? kb.nama : "", kepalaBalaiNip: kb ? kb.nip : "", kasubbagJabatan: "Kepala Subbagian Tata Usaha,",
-      kasubbagNama: tu ? tu.nama : "", kasubbagNip: tu ? tu.nip : ""
+      ...P, logo: P.logo || window.SRG_DEFAULT_LOGO || "", pegawai: list, manualPegawai: state.manual,
+      alamat: P.alamat || R.DEFAULT_ALAMAT, kontak: P.kontak || R.DEFAULT_KONTAK,
+      kepalaBalaiJabatan: `${pre(P.kbStatus)}Kepala Balai,`,
+      kepalaBalaiNama: P.kbNama || (kb ? kb.nama : ""), kepalaBalaiNip: P.kbNama ? P.kbNip || "" : kb ? kb.nip : "",
+      kasubbagJabatan: `${pre(P.tuStatus)}${(P.tuJabatan || "Kepala Subbagian Tata Usaha").replace(/,\s*$/, "")},`,
+      kasubbagNama: P.tuNama || (tu ? tu.nama : ""), kasubbagNip: P.tuNama ? P.tuNip || "" : tu ? tu.nip : ""
     };
   }
   let building = false, again = false;
@@ -449,6 +481,11 @@
       $("report").hidden = false; $("empty").hidden = true; $("toolbar").hidden = false;
       renderReady(R.readiness(M, I, state.info, P, state.notes, lpkScans.get()));
       renderManual(M);
+      renderPeran(M, I);
+      const C = R.faktaCtx(M, I);
+      factsEd.render(R.faktaShown(C), C);
+      const wsel = $("i_wilayah");
+      if (wsel.options.length) wsel.options[0].textContent = M.wilayahAuto ? `Otomatis: ${SRGWilayah.detectLabel(M.wilayahAuto)}` : "Otomatis dari titik patroli (tidak terdeteksi, pilih manual)";
       $("dipaInfo").innerHTML = I.nomorDipa ? `Sumber anggaran: <b>${R.esc(I.sumberAnggaran)}</b><br>DIPA Nomor <b>${R.esc(I.nomorDipa)}</b> tanggal <b>${R.esc(R.tglPanjang(I.tanggalDipa))}</b>` : `DIPA TA.${R.esc(I.year)} belum tercatat di data/dipa.json.`;
       $("unknownBtn").hidden = false;
       $("unknownBtn").textContent = M.unknown.size ? `Lengkapi kamus: ${M.unknown.size} kode belum dikenal` : "Edit kamus label";
@@ -458,10 +495,11 @@
   }
 
   function renderReady(items) {
-    const missing = items.filter((x) => !x.ok && x.note !== "opsional");
+    const opt = (x) => x.opt || x.note === "opsional";
+    const missing = items.filter((x) => !x.ok && !opt(x));
     $("ready").hidden = false;
     $("ready").innerHTML = `<div class="ready-head"><b>Kesiapan data laporan</b><span class="pill ${missing.length ? "warn" : "ok"}">${missing.length ? `${missing.length} belum lengkap` : "Siap dibuat final"}</span></div>
-      <ul>${items.map((x) => `<li class="${x.ok ? "ok" : x.note === "opsional" ? "opt" : "no"}"><span class="mk">${x.ok ? "✓" : x.note === "opsional" ? "○" : "!"}</span>${R.esc(x.label)}${x.note ? ` <small>${R.esc(x.note)}</small>` : ""}</li>`).join("")}</ul>`;
+      <ul>${items.map((x) => `<li class="${x.ok ? "ok" : opt(x) ? "opt" : "no"}"><span class="mk">${x.ok ? "✓" : opt(x) ? "○" : "!"}</span>${R.esc(x.label)}${x.note ? ` <small>${R.esc(x.note)}</small>` : ""}</li>`).join("")}</ul>`;
   }
 
   /* ---------- Placeholder ---------- */
@@ -531,6 +569,12 @@
   bindProfile();
   renderPegawaiInfo();
   dictSummary();
+  fillSatwaList();
+  // Profil kawasan dan resor: salinan bawaan dipakai dulu, lalu diperbarui dari situs Satu Data Tambora bila tersambung
+  const profilInfo = () => { if (window.SRGWilayah) $("profilInfo").textContent = SRGWilayah.status(); };
+  profilInfo();
+  window.addEventListener("srg:profil", () => { profilInfo(); rebuild(); });
+  if (window.SRGWilayah && !window.SRG_PREVIEW_ONLY) SRGWilayah.refresh().then(profilInfo);
   const layersReady = (async () => {
     state.layers = restoreLayers(await idb.get("layers"));
     renderLayers();

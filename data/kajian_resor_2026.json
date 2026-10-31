@@ -1,0 +1,219 @@
+{
+  "sumber": {
+    "judul": "Laporan Hasil Kajian Wilayah Kerja Resor Taman Nasional Gunung Tambora",
+    "penyusun": "Tim Penyusun Kajian Wilayah Kerja Resor, Balai Taman Nasional Tambora",
+    "tempat": "Dompu",
+    "tanggal": "2026-09-13",
+    "dasar": "Peraturan Menteri LHK Nomor 16 Tahun 2024 tentang Resor pada UPT Ditjen KSDAE; Nota Dinas Direktur Konservasi Kawasan Nomor ND.64/KK/PPK/KSA.02.04/B/02/2026 tanggal 19 Februari 2026"
+  },
+  "kawasan": {
+    "nama": "Taman Nasional Gunung Tambora",
+    "pengelola": "Balai Taman Nasional Tambora (Tipe B)",
+    "penetapan": "SK.111/Menlhk-II/2015 tanggal 7 April 2015",
+    "luas_sk_ha": 71645.64,
+    "luas_kajian_ha": 78686.81,
+    "kabupaten": ["Dompu", "Bima"],
+    "provinsi": "Nusa Tenggara Barat",
+    "batas": [
+      {"arah": "Utara", "nama": "KPH Tambora"},
+      {"arah": "Timur", "nama": "KPH Tambora"},
+      {"arah": "Selatan", "nama": "PT Sukses Mantap Sejahtera"},
+      {"arah": "Barat", "nama": "PT Agro Wahana Bumi"}
+    ],
+    "fisik": {
+      "puncak_mdpl": 2851,
+      "lereng": "8–45%, di beberapa bagian terjal",
+      "gunung": [["Tambora", 2851], ["Ranu", 1128], ["Lambubu", 1120], ["Mbolo", 1180], ["Peke", 1000], ["Kancidong", 950], ["Tabbenae", 833], ["Donggo Tabbe", 572], ["Kadindingnae", 505]],
+      "sungai": ["Labuhan Kenanga", "Pasumba", "Labuhan Bili", "Nangamiro", "Hodo", "Maggae"],
+      "geologi": "Batuan gunung api satuan lava–breksi, sebagian kecil breksi andesit–basal (Peta Geologi Lembar Sumbawa 1:250.000, Badan Geologi 2012)",
+      "tanah": "Regosol (vulkan), mediteran (vulkan), dan aluvial; sangat peka erosi dan labil"
+    },
+    "ekosistem": [
+      {"nama": "Savana", "ha": 43271.11},
+      {"nama": "Hutan pamah", "ha": 23668.51},
+      {"nama": "Pegunungan bawah", "ha": 7303.34},
+      {"nama": "Pegunungan atas", "ha": 2187.80},
+      {"nama": "Sub-alpin", "ha": 920.66},
+      {"nama": "Ekosistem buatan (Zona Khusus Karya Sari dan So Tompo)", "ha": 1260.95},
+      {"nama": "Danau kaldera", "ha": 74.46}
+    ],
+    "kehati": {"flora": 55, "fauna": 109, "fauna_dilindungi": 22, "periode": "inventarisasi 2018–2024", "dasar_lindung": "Permen LHK P.106/2018"},
+    "satwa_kunci": {
+      "dasar": "SK Kepala Balai TN Tambora Nomor SK.5/T.41/TU/KSA/1/2021",
+      "jenis": [
+        {"nama": "Rusa timor", "ilmiah": "Rusa timorensis"},
+        {"nama": "Elang flores", "ilmiah": "Nisaetus floris"}
+      ]
+    },
+    "air": {"mata_air": 11, "dimanfaatkan": 6, "pemanfaat": "Desa Oi Katupa, beberapa dusun Desa Kawinda Toi, Dusun Karyasari, dan jalur pendakian"},
+    "nilai_penting": [
+      "Daerah tangkapan air Semenanjung Sanggar (National Conservation Plan Vol. 7 Nusa Tenggara)",
+      "Fitur geologi pascaletusan 1815 yang perlu dilindungi",
+      "Pariwisata berkelanjutan minat pendakian dan wisata geologi",
+      "Habitat dua satwa kunci: Rusa timor dan Elang flores"
+    ],
+    "wisata": [
+      {"nama": "Puncak dan Kaldera Tambora", "ket": "4 jalur pendakian: 2 jalur jalan kaki (Kawinda Toi, Pancasila) dan 2 jalur berkendara (Piong, Doroncanga)"},
+      {"nama": "Air Terjun Oi Marai", "ket": "Panorama dan berkemah, diminati wisatawan lokal; dikelola Resor Kawinda Toi"},
+      {"nama": "Sanctuary Rusa Timor Doroncanga", "ket": "Wisata edukasi interaksi dengan Rusa timor, guest house; dikelola Resor Doroncanga"}
+    ],
+    "jasa_lingkungan": ["Mata air (11 titik)", "Karbon (sedang diolah dan diuji laboratorium)", "Panas bumi di Doro Afi Toi, dalam kaldera (belum diteliti)"],
+    "sdm": [{"jenis": "PNS", "n": 66}, {"jenis": "PPPK", "n": 28}, {"jenis": "Masyarakat Mitra Polhut", "n": 30}, {"jenis": "Masyarakat Peduli Api", "n": 31}],
+    "desa_penyangga": [
+      {"kecamatan": "Sanggar", "desa": ["Boro", "Piong", "Oi Saro"]},
+      {"kecamatan": "Tambora", "desa": ["Oi Katupa", "Kawinda Toi", "Oi Panihi", "Rasa Bou", "Kawinda Nae", "Labuhan Kananga"]},
+      {"kecamatan": "Pekat", "desa": ["Tambora", "Sorinomo", "Doropeti", "Sori Tatanga"]},
+      {"kecamatan": "Kempo", "desa": ["Kempo", "Taa"]}
+    ],
+    "mata_pencaharian": ["Pertanian jagung", "Peternakan sapi, kerbau, dan kuda", "Pencari HHBK (madu)", "Nelayan", "Toko kebutuhan pokok dan pertanian"],
+    "ancaman": "Kebakaran umumnya di savana, dipicu perburuan (pembakaran untuk menumbuhkan tunas rumput pemikat rusa) dan pembukaan lahan. Perburuan menyasar rusa dan burung kicau. Pembalakan menyasar pohon besar bernilai tinggi seperti Duabanga moluccana, terutama di areal bertutupan rapat."
+  },
+  "metode": {
+    "ringkas": "Spatial-MCDA: 12 variabel Pasal 6 PermenLHK 16/2024 disederhanakan menjadi 6 kriteria, dibobot dengan AHP oleh praktisi tapak, ditumpangsusun dengan Weighted Linear Combination di Zonation 5 (mode ABF, z = 0,25), lalu keseimbangan beban kerja antarresor diuji dengan Shannon Evenness Index.",
+    "kriteria": [
+      {"kode": "K3", "id": "gangguan", "nama": "Gangguan / kerawanan kawasan", "bobot": 0.2436, "data": "Kepadatan temuan gangguan 2021–awal 2026 (Space Time Kernel Density)"},
+      {"kode": "K5", "id": "desa", "nama": "Jumlah desa binaan", "bobot": 0.1987, "data": "Kepadatan penduduk desa binaan (BPS Bima dan Dompu)"},
+      {"kode": "K1", "id": "fisik", "nama": "Kondisi fisik kawasan", "bobot": 0.1755, "data": "DEM dan kelerengan (50:50)"},
+      {"kode": "K6", "id": "wisata", "nama": "Pelayanan publik / wisata", "bobot": 0.1695, "data": "4 jalur pendakian dan 2 ODTWA dibobot rata-rata pengunjung 2023–2025, ditumpangsusun dengan zona pemanfaatan"},
+      {"kode": "K4", "id": "akses", "nama": "Aksesibilitas dari kantor resor", "bobot": 0.1404, "data": "Jarak dari kantor resor/pos dan waktu tempuh jalur R2, R4, jalan kaki (distance allocation)"},
+      {"kode": "K2", "id": "kehati", "nama": "Potensi kehati", "bobot": 0.0723, "data": "Areal bernilai konservasi tinggi dari MaxEnt 96 jenis satwa dan 5 jenis tumbuhan penting"}
+    ],
+    "ahp": {"lambda_maks": 6.5468, "ci": 0.1094, "ri": 1.24, "cr": 0.0882},
+    "shannon": {
+      "eksisting": {"sptn1": 0.9582, "sptn2": 0.6644, "tn": 0.8644},
+      "usulan": {"sptn1": 0.9724, "sptn2": 0.9950, "tn": 0.9807}
+    },
+    "kelas_e": "E ≥ 0,90 sangat seimbang; 0,80–0,90 cukup seimbang; < 0,80 timpang"
+  },
+  "sptn": [
+    {"id": "I", "nama": "SPTN Wilayah I Kore", "kabupaten": "Bima", "luas_ha": 44684.03, "wds": 0.52,
+     "ringkas": "Didominasi savana di Piong dan sebagian Oi Katupa; Kawinda Toi dan sebagian Oi Katupa berelevasi tinggi dengan tutupan rapat dan akses terbatas. Penduduk desa binaan relatif sedikit sehingga perambahan dan pembalakan rendah; fokus gangguan pada kebakaran hutan serta perburuan rusa dan burung.",
+     "wisata": ["Jalur pendakian Piong (berkendara)", "Jalur pendakian Kawinda Toi (jalan kaki)", "Air Terjun Oi Marai"]},
+    {"id": "II", "nama": "SPTN Wilayah II Pekat", "kabupaten": "Dompu", "luas_ha": 34002.78, "wds": 0.48,
+     "ringkas": "Savana dominan di Doroncanga; Pancasila dan sebagian Doropeti berelevasi tinggi dengan tutupan rapat dan akses terbatas. Penduduk desa binaan padat dan pasokan pohon besar tinggi, sehingga perambahan, pembalakan liar, dan perburuan rusa bernilai tinggi.",
+     "wisata": ["Jalur pendakian Doroncanga (berkendara)", "Sanctuary Rusa Timor Doroncanga", "Jalur pendakian Pancasila (jalan kaki)"]}
+  ],
+  "resor_lama": [
+    {"nama": "Piong", "sptn": "I", "luas_ha": 21740.00, "wds": 0.25, "wfd": 0.90},
+    {"nama": "Oi Katupa", "sptn": "I", "luas_ha": 13496.89, "wds": 0.15, "wfd": 0.89},
+    {"nama": "Kawinda Toi", "sptn": "I", "luas_ha": 9447.12, "wds": 0.12, "wfd": 1.02},
+    {"nama": "Doroncanga", "sptn": "II", "luas_ha": 20232.23, "wds": 0.27, "wfd": 1.05},
+    {"nama": "Doropeti", "sptn": "II", "luas_ha": 11047.74, "wds": 0.16, "wfd": 1.12},
+    {"nama": "Pancasila", "sptn": "II", "luas_ha": 2722.82, "wds": 0.05, "wfd": 1.42}
+  ],
+  "resor": [
+    {
+      "id": "piong", "kode": 1, "nama": "Piong", "sptn": "I", "luas_ha": 18934.68, "luas_konversi_ha": 18942.80,
+      "desa": ["Piong", "Oi Saro"], "kantor": "Desa Piong",
+      "akses": "Mobil (R4), motor (R2), jalan kaki",
+      "potensi": ["Pendakian berkendara (4x4 dan motor trail)", "Pengamatan burung", "Ekosistem savana", "Habitat Rusa timor", "Fitur geologi unik"],
+      "ancaman": ["Kebakaran hutan", "Perburuan liar", "Perambahan kawasan"],
+      "fokus": ["Kerawanan kawasan", "Desa binaan", "Pelayanan publik (wisata)"],
+      "parameter_utama": [["Desa binaan", 26.6], ["Aksesibilitas", 24.1], ["Fisik", 22.4], ["Gangguan", 19.6]],
+      "zonation": {"wds": 0.22, "wfd": 0.90, "fisik": 0.2241, "kehati": 0.1653, "gangguan": 0.1963, "wisata": 0.1879, "p_sptn": 0.4123, "p_tn": 0.2160},
+      "personel": [
+        {"jabatan": "Polisi Kehutanan", "n": 7, "tugas": "2 ahli/penyelia dan 5 terampil/mahir; pengawasan patroli savana dan penegakan hukum"},
+        {"jabatan": "Pengendali Ekosistem Hutan", "n": 4, "tugas": "1 ahli dan 3 terampil; pemantauan vegetasi savana, populasi satwa, dan pelayanan wisata"},
+        {"jabatan": "Penyuluh Kehutanan", "n": 3, "tugas": "Pemberdayaan masyarakat di desa binaan penyangga terluas"},
+        {"jabatan": "Manggala Agni", "n": 6, "tugas": "Prioritas tinggi untuk pencegahan dan pemadaman karhutla savana"}
+      ]
+    },
+    {
+      "id": "oi-katupa", "kode": 2, "nama": "Oi Katupa", "sptn": "I", "luas_ha": 16387.78, "luas_konversi_ha": 16395.10,
+      "desa": ["Oi Katupa", "Kawinda Toi", "Piong"], "kantor": "Desa Oi Katupa",
+      "akses": "Motor (R2), mobil (R4) melalui 2 jalur masuk, jalan kaki",
+      "potensi": ["Habitat satwa kunci (Elang flores dan Rusa timor)", "Ekosistem savana dan hutan pamah", "HHBK madu hutan (Uma Ani)", "Areal bernilai konservasi tinggi", "Sumber air", "Fitur geologi unik"],
+      "ancaman": ["Perburuan satwa", "Kebakaran hutan", "Perambahan kawasan"],
+      "fokus": ["Kerawanan kawasan", "Potensi kehati", "Desa binaan", "Kondisi fisik kawasan"],
+      "parameter_utama": [["Gangguan", 22.8], ["Fisik", 21.6], ["Desa binaan", 18.2], ["Kehati", 16.5]],
+      "zonation": {"wds": 0.19, "wfd": 0.92, "fisik": 0.2163, "kehati": 0.1651, "gangguan": 0.2280, "wisata": 0.1917, "p_sptn": 0.3638, "p_tn": 0.1906},
+      "personel": [
+        {"jabatan": "Polisi Kehutanan", "n": 6, "tugas": "2 penyelia/ahli dan 4 terampil/mahir; penegakan hukum"},
+        {"jabatan": "Pengendali Ekosistem Hutan", "n": 4, "tugas": "1 ahli dan 3 terampil"},
+        {"jabatan": "Penyuluh Kehutanan", "n": 2, "tugas": "Sosialisasi batas kawasan dan kemitraan konservasi desa penyangga"},
+        {"jabatan": "Manggala Agni", "n": 3, "tugas": "Penanganan potensi karhutla di perbatasan kebun dan savana"},
+        {"jabatan": "Petugas Pengaman Hutan dan Hasil Hutan", "n": 1, "tugas": "Pengamanan kantor resor dan administrasi pos"}
+      ]
+    },
+    {
+      "id": "kawinda-toi", "kode": 3, "nama": "Kawinda Toi", "sptn": "I", "luas_ha": 9361.56, "luas_konversi_ha": 9366.12,
+      "desa": ["Kawinda Toi", "Kawinda Nae"], "kantor": "Kawinda Toi",
+      "akses": "Jalan kaki (100% di dalam kawasan)",
+      "potensi": ["Wisata pendakian dan Air Terjun Oi Marai (ODTWA)", "Areal bernilai konservasi tinggi", "HHBK madu hutan (Uma Ani)", "Sumber air"],
+      "ancaman": ["Perburuan liar"],
+      "fokus": ["Potensi kehati", "Akses dan kondisi fisik sulit", "Pelayanan publik", "Desa binaan"],
+      "parameter_utama": [["Fisik", 16.2], ["Gangguan", 13.9], ["Kehati", 12.7], ["Wisata", 12.1]],
+      "zonation": {"wds": 0.12, "wfd": 0.99, "fisik": 0.1617, "kehati": 0.1265, "gangguan": 0.1390, "wisata": 0.1206, "p_sptn": 0.2239, "p_tn": 0.1174},
+      "personel": [
+        {"jabatan": "Polisi Kehutanan", "n": 5, "tugas": "1 penyelia/ahli dan 4 terampil/mahir; patroli jalan kaki di hutan lebat dan pengamanan wisata"},
+        {"jabatan": "Pengendali Ekosistem Hutan", "n": 3, "tugas": "1 ahli dan 2 terampil; inventarisasi spesies endemik dan pemantauan air terjun"},
+        {"jabatan": "Penyuluh Kehutanan", "n": 2, "tugas": ""},
+        {"jabatan": "Manggala Agni", "n": 2, "tugas": ""}
+      ]
+    },
+    {
+      "id": "doro-tabe", "kode": 4, "nama": "Doro Tabe", "sptn": "II", "luas_ha": 9680.56, "luas_konversi_ha": 9685.00, "baru": true,
+      "desa": ["Tolokalo", "Soritatanga"], "kantor": "Doroncanga – Jalan Lintas Calabai (Hodo), rekomendasi lokasi kantor resor",
+      "akses": "Mobil (R4), motor (R2), jalan kaki",
+      "potensi": ["Fitur geologi unik", "Savana"],
+      "ancaman": ["Perambahan kawasan (sekitar Zona Khusus So Tompo)", "Kebakaran hutan", "Penebangan liar", "Perburuan"],
+      "fokus": ["Kerawanan kawasan", "Desa binaan"],
+      "parameter_utama": [["Kehati", 16.5], ["Aksesibilitas", 15.9], ["Wisata", 11.1], ["Desa binaan", 10.4]],
+      "zonation": {"wds": 0.12, "wfd": 1.01, "fisik": 0.0947, "kehati": 0.1645, "gangguan": 0.0775, "wisata": 0.1110, "p_sptn": 0.2607, "p_tn": 0.1241},
+      "personel": [
+        {"jabatan": "Polisi Kehutanan", "n": 5, "tugas": "1 penyelia/ahli dan 4 terampil/mahir"},
+        {"jabatan": "Pengendali Ekosistem Hutan", "n": 2, "tugas": ""},
+        {"jabatan": "Penyuluh Kehutanan", "n": 3, "tugas": ""},
+        {"jabatan": "Manggala Agni", "n": 5, "tugas": "Pengendalian karhutla di savana"}
+      ]
+    },
+    {
+      "id": "doroncanga", "kode": 5, "nama": "Doroncanga", "sptn": "II", "luas_ha": 9007.79, "luas_konversi_ha": 9012.36,
+      "desa": ["Soritatanga"], "kantor": "Sanctuary Rusa Timor (Pos 1 Jalur Pendakian Doroncanga), Desa Soritatanga",
+      "akses": "Mobil (R4), motor (R2), jalan kaki",
+      "potensi": ["Jalur pendakian berkendara (4x4 dan motor trail)", "Sanctuary Rusa Timor Doroncanga", "Fitur geologi unik", "Ekosistem savana"],
+      "ancaman": ["Kebakaran hutan", "Perburuan satwa", "Perambahan kawasan"],
+      "fokus": ["Pelayanan publik (wisata)", "Kerawanan kawasan"],
+      "parameter_utama": [["Kehati", 14.8], ["Wisata", 13.6], ["Aksesibilitas", 13.1], ["Gangguan", 13.0]],
+      "zonation": {"wds": 0.13, "wfd": 1.11, "fisik": 0.0826, "kehati": 0.1483, "gangguan": 0.1295, "wisata": 0.1356, "p_sptn": 0.2671, "p_tn": 0.1271},
+      "personel": [
+        {"jabatan": "Polisi Kehutanan", "n": 4, "tugas": "2 penyelia/ahli dan 2 terampil/mahir; pengamanan wisata pendakian berkendara dan penegakan hukum"},
+        {"jabatan": "Pengendali Ekosistem Hutan", "n": 4, "tugas": "1 ahli dan 3 terampil"},
+        {"jabatan": "Penyuluh Kehutanan", "n": 2, "tugas": "Tata kelola wisata savana, sampah pengunjung, dan edukasi pemilik ternak"},
+        {"jabatan": "Manggala Agni", "n": 4, "tugas": "Tim siaga utama pemadam karhutla"}
+      ]
+    },
+    {
+      "id": "doropeti", "kode": 6, "nama": "Doropeti", "sptn": "II", "luas_ha": 9454.32, "luas_konversi_ha": 9459.44,
+      "desa": ["Doropeti", "Soritatanga"], "kantor": "Desa Doropeti",
+      "akses": "Mobil (R4), motor (R2), jalan kaki (60% kawasan)",
+      "potensi": ["Areal bernilai konservasi tinggi", "Habitat Elang flores", "Sumber air"],
+      "ancaman": ["Perambahan kawasan", "Penebangan liar", "Perburuan satwa"],
+      "fokus": ["Kerawanan kawasan", "Akses dan kondisi fisik sulit"],
+      "parameter_utama": [["Aksesibilitas", 16.5], ["Wisata", 16.3], ["Kehati", 15.7], ["Desa binaan", 10.3]],
+      "zonation": {"wds": 0.13, "wfd": 1.08, "fisik": 0.0802, "kehati": 0.1568, "gangguan": 0.0998, "wisata": 0.1625, "p_sptn": 0.2716, "p_tn": 0.1293},
+      "personel": [
+        {"jabatan": "Polisi Kehutanan", "n": 6, "tugas": "2 penyelia/ahli dan 4 terampil/mahir; patroli jalan kaki di hutan dan penanganan konflik satwa"},
+        {"jabatan": "Pengendali Ekosistem Hutan", "n": 3, "tugas": "1 ahli dan 2 terampil; pemantauan tata air/sumber air dan inventarisasi kehati"},
+        {"jabatan": "Penyuluh Kehutanan", "n": 3, "tugas": "Konservasi tanah dan air serta pendampingan zona khusus"},
+        {"jabatan": "Manggala Agni", "n": 3, "tugas": "Pencegahan karhutla di perbatasan perladangan dan kantong padang rumput"}
+      ]
+    },
+    {
+      "id": "pancasila", "kode": 7, "nama": "Pancasila", "sptn": "II", "luas_ha": 5860.11, "luas_konversi_ha": 5863.25,
+      "desa": ["Tambora", "Kawinda Nae"], "kantor": "Dusun Pancasila, Desa Tambora",
+      "akses": "Jalan kaki (100% di dalam kawasan)",
+      "potensi": ["Wisata pendakian ke puncak tertinggi Tambora (2.851 mdpl)", "Habitat Rusa timor", "Areal bernilai konservasi tinggi"],
+      "ancaman": ["Perburuan satwa", "Pendaki ilegal"],
+      "fokus": ["Pelayanan publik (wisata)", "Potensi kehati", "Kerawanan", "Akses dan kondisi fisik sulit"],
+      "parameter_utama": [["Fisik", 14.0], ["Gangguan", 13.0], ["Desa binaan", 10.3], ["Wisata", 9.1]],
+      "zonation": {"wds": 0.10, "wfd": 1.28, "fisik": 0.1403, "kehati": 0.0734, "gangguan": 0.1299, "wisata": 0.0908, "p_sptn": 0.2006, "p_tn": 0.0955},
+      "personel": [
+        {"jabatan": "Polisi Kehutanan", "n": 5, "tugas": "2 penyelia/ahli dan 3 terampil/mahir; pengamanan pintu pendakian utama, patroli pos, dan tim SAR"},
+        {"jabatan": "Pengendali Ekosistem Hutan", "n": 4, "tugas": "1 ahli dan 3 terampil; pemantauan dampak pendakian dan inventarisasi kehati hutan pamah dan pegunungan"},
+        {"jabatan": "Penyuluh Kehutanan", "n": 3, "tugas": "Edukasi Zero Waste Mountain bagi pendaki dan pembinaan pemandu/porter lokal"},
+        {"jabatan": "Manggala Agni", "n": 2, "tugas": "Pemantauan api unggun pendaki dan pencegahan karhutla di Pos 5 dan puncak"}
+      ]
+    }
+  ]
+}

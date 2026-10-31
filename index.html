@@ -40,7 +40,7 @@
           <label class="fld">Judul baku kegiatan <select id="i_jenis"></select></label>
           <label class="fld">Judul kegiatan (otomatis dari mandat patroli; narasi menyesuaikan judul) <input type="text" id="i_judul" data-info="judul" placeholder="SMART Patrol Rawan Tipihut"></label>
           <label class="fld">Nomor Surat Tugas <input type="text" id="i_nomorST" data-info="nomorST" placeholder="ST.380/T.41/TU/DIPA/04/2026"></label>
-          <label class="fld">Lokasi (wilayah kerja) <input type="text" id="i_lokasi" data-info="lokasi" placeholder="SPTN Wilayah II Pekat"></label>
+          <label class="fld">Wilayah kerja (keadaan umum lokasi disusun dari Profil Kawasan dan Profil Resor Satu Data Tambora) <select id="i_wilayah" data-info="wilayah"><option value="">Otomatis dari titik patroli</option></select></label>
           <label class="fld">Tanggal Surat Tugas <input type="date" id="i_tanggalST" data-info="tanggalST"></label>
           <div class="row2">
             <label class="fld">Pelaksanaan mulai (sesuai ST) <input type="date" id="i_tglMulai" data-info="tglMulai"></label>
@@ -52,32 +52,45 @@
           </div>
           <label class="fld">Grid (kosongkan jika memakai lapisan grid) <input type="text" id="i_grids" data-info="grids" placeholder="282, 35, 83, 86, 12"></label>
           <div id="manualBox"></div>
-          <details class="sub-d">
+          <details class="sub-d" open>
             <summary>Anggota yang ikut tetapi tidak tercatat di SMART</summary>
-            <p class="muted">Mis. personel TNI/Polri, MMP/MPA, atau masyarakat. Ditampilkan terpisah per unsur di tabel tim.</p>
+            <p class="muted">Cari di daftar pegawai. Petugas di luar daftar (TNI/Polri, MMP/MPA, masyarakat, pegawai baru) diisi manual di bawah; ditampilkan terpisah per unsur di tabel tim.</p>
             <div class="picker"><input type="search" id="lSearch" placeholder="Cari dari daftar pegawai" autocomplete="off"><div class="pick-list" id="lResults"></div></div>
             <div class="form" id="lManForm">
-              <label class="fld">Nama <input type="text" data-m="nama" placeholder="Bripka Nama Lengkap"></label>
+              <label class="fld">Nama (isi manual) <input type="text" data-m="nama" placeholder="Bripka Nama Lengkap"></label>
               <div class="row2">
-                <label class="fld">NIP / NRP / NIK <input type="text" data-m="nip"></label>
-                <label class="fld">Pangkat/Gol <input type="text" data-m="pangkat" placeholder="-"></label>
+                <label class="fld">NIP / NRP / NIK <input type="text" data-m="nip" inputmode="numeric"></label>
+                <label class="fld">Pangkat/Gol <input type="text" data-m="pangkat" placeholder="-" list="dlPangkat"></label>
               </div>
-              <label class="fld">Jabatan <input type="text" data-m="jabatan" placeholder="Anggota Polsek Pekat"></label>
+              <label class="fld">Jabatan <input type="text" data-m="jabatan" placeholder="Anggota Polsek Pekat" list="dlJabatan"></label>
               <label class="fld">Unsur <select data-m="unsur" id="lManUnsur"></select></label>
               <button class="btn ghost full" id="lManAdd" type="button">Tambahkan ke tim</button>
             </div>
             <div id="lExtra" class="team"></div>
           </details>
+          <details class="sub-d">
+            <summary>Peran anggota dalam tim</summary>
+            <p class="muted">Terisi otomatis dari ketua tim, unsur, dan judul kegiatan; ubah bila perlu. Uraian tugas setiap peran ditulis otomatis di laporan.</p>
+            <div id="lPeran" class="team"></div>
+          </details>
           <label class="fld">Penyusun laporan <select id="i_penyusunNip" data-info="penyusunNip"></select></label>
           <label class="fld">Hari penyusunan rencana sebelum patroli <input type="number" id="i_rencanaHari" data-info="rencanaHari" min="0" max="14" value="1"></label>
-          <label class="chk"><input type="checkbox" id="i_narasiOk" data-info="narasiOk"> Narasi sudah diperiksa dan isian [ … ] sudah dilengkapi</label>
+          <label class="chk"><input type="checkbox" id="i_narasiOk" data-info="narasiOk"> Narasi sudah diperiksa</label>
         </div>
       </details>
     </section>
 
     <section class="card">
+      <details id="factsBox" open>
+        <summary><h2><span class="step">3</span> Isian lapangan</h2></summary>
+        <p class="muted">Pilih yang sesuai kejadian di lapangan; narasi Pembahasan, Simpulan, dan Saran tersusun otomatis. Pertanyaan menyesuaikan judul dan temuan SMART. Isian yang dikosongkan tidak ditulis.</p>
+        <div id="lFacts" class="facts"><p class="muted">Muat data patroli dulu.</p></div>
+      </details>
+    </section>
+
+    <section class="card">
       <details>
-        <summary><h2><span class="step">3</span> Anggaran, alat, dan Surat Tugas</h2></summary>
+        <summary><h2><span class="step">4</span> Anggaran, alat, dan Surat Tugas</h2></summary>
         <p class="muted">Sama seperti isian RPK. Disimpan per patroli di browser ini.</p>
         <label class="fld">Akun anggaran <input type="text" id="i_akun" data-info="akun" placeholder="7273.REA.002.051.A.521219 (PNP)"></label>
         <p class="fixed" id="dipaInfo"></p>
@@ -97,9 +110,11 @@
 
     <section class="card">
       <details id="profileBox">
-        <summary><h2><span class="step">4</span> Profil Balai</h2></summary>
+        <summary><h2><span class="step">5</span> Profil Balai</h2></summary>
         <p class="muted">Dipakai untuk semua laporan. Bisa diekspor dan dibagikan ke SPTN lain.</p>
         <label class="fld">Nama Balai <input type="text" id="p_balai" data-prof="balai"></label>
+        <label class="fld">Alamat pada kop <input type="text" id="p_alamat" data-prof="alamat" placeholder="Jl. Syech Muhammad No. 5 Dompu 84212"></label>
+        <label class="fld">Telepon dan e-mail pada kop <input type="text" id="p_kontak" data-prof="kontak" placeholder="Telp. 0370-21919 Fax. 0370-21919, e-mail : tntambora@gmail.com"></label>
         <label class="fld">Kota penandatanganan bawaan <input type="text" id="p_kota" data-prof="kota" placeholder="Dompu"></label>
         <label class="fld">Logo Balai (bawaan: logo TN Tambora) <input type="file" id="p_logo" accept="image/*"></label>
         <button class="btn link" id="clearLogo" type="button">Kembali ke logo bawaan</button>
@@ -108,6 +123,22 @@
         <button class="btn link" id="resetPegawai" type="button">Pakai daftar pegawai bawaan</button>
         <p class="status" id="pegawaiStatus"></p>
         <p class="muted">Urutan baris = urutan kepangkatan. Kolom yang dibaca: Nama, NIP, Jabatan, Pangkat/Gol. Kepala Balai dan Kasubbag TU dikenali dari kolom Jabatan.</p>
+        <details class="sub-d">
+          <summary>Penandatangan lembar pengesahan (Plt./Plh. atau pejabat baru)</summary>
+          <p class="muted">Kosongkan nama untuk memakai pejabat dari daftar pegawai.</p>
+          <div class="row2">
+            <label class="fld">Status Kepala Balai <select data-prof="kbStatus"><option value="">Definitif</option><option>Plt.</option><option>Plh.</option></select></label>
+            <label class="fld">NIP <input type="text" data-prof="kbNip" inputmode="numeric"></label>
+          </div>
+          <label class="fld">Nama Kepala Balai (pengganti) <input type="text" data-prof="kbNama" placeholder="dari daftar pegawai"></label>
+          <label class="fld">Jabatan Kasubbag TU <input type="text" data-prof="tuJabatan" placeholder="Kepala Subbagian Tata Usaha"></label>
+          <div class="row2">
+            <label class="fld">Status Kasubbag TU <select data-prof="tuStatus"><option value="">Definitif</option><option>Plt.</option><option>Plh.</option></select></label>
+            <label class="fld">NIP <input type="text" data-prof="tuNip" inputmode="numeric"></label>
+          </div>
+          <label class="fld">Nama Kasubbag TU (pengganti) <input type="text" data-prof="tuNama" placeholder="dari daftar pegawai"></label>
+        </details>
+        <p class="fixed" id="profilInfo"></p>
         <label class="fld">Dasar (satu baris satu aturan; dipakai LPK dan RPK. DIPA, Surat Tugas, dan nota kesepahaman TNI/Polri ditambahkan otomatis) <textarea id="p_dasarHukum" data-prof="dasarHukum" rows="5"></textarea></label>
         <label class="fld">Metode pelaksanaan bawaan (satu baris satu poin; dipakai LPK dan RPK) <textarea id="p_metode" data-prof="metode" rows="5"></textarea></label>
         <div class="fld">Lapisan peta (bawaan: batas kawasan, zonasi, resor, jalur, grid). Tambah GeoJSON WGS84 atau shapefile .zip
@@ -126,7 +157,7 @@
 
     <section class="card">
       <details>
-        <summary><h2><span class="step">5</span> Kamus dan template</h2></summary>
+        <summary><h2><span class="step">6</span> Kamus dan template</h2></summary>
         <p class="muted">Nama kategori dan jenis memakai Data Model Balai TN Tambora bawaan. Muat ekspor Data Model yang lebih baru bila ada perubahan.</p>
         <label class="btn ghost full"><input type="file" id="dmInput" accept=".xml,.csv,.txt,.zip" hidden>Muat Data Model (.xml/.zip) atau kamus (.csv)</label>
         <p class="status" id="dictStatus"></p>
@@ -153,7 +184,7 @@
     <section class="ready noprint" id="ready" hidden></section>
     <div id="empty" class="empty noprint">
       <h2>Belum ada data</h2>
-      <p>Muat file ekspor patroli dari SMART Desktop (<i>Patrol → Export</i>, format XML/zip). Laporan disusun dengan kop, LAPORAN / TENTANG / judul dan pengesahan, lalu A. Pendahuluan sampai E. Penutup, dan lampiran peta, dokumentasi, serta Surat Tugas.</p>
+      <p>Muat file ekspor patroli dari SMART Desktop (<i>Patrol → Export</i>, format XML/zip). Laporan disusun sesuai Memorandum M.57/T.41/TU/PEG/02/2026: sampul, lembar pengesahan, daftar isi, daftar tabel, kop, LAPORAN / TENTANG / judul, 1. Pendahuluan sampai 5. Penutup, lalu lampiran Surat Tugas, matriks data, matriks analisis, peta, dan dokumentasi.</p>
     </div>
     <article id="report" class="paper" hidden></article>
   </section>
@@ -170,7 +201,7 @@
           <label class="fld">Judul kegiatan (narasi menyesuaikan judul) <input type="text" id="r_judul" data-rpk="judul" placeholder="SMART Patrol Rawan Tipihut"></label>
           <label class="fld">Nomor Surat Tugas <input type="text" data-rpk="nomorST" placeholder="ST.1167/T.41/TU/DIPA/10/2026"></label>
           <label class="fld">Tanggal Surat Tugas <input type="date" data-rpk="tanggalST"></label>
-          <label class="fld">Lokasi (wilayah kerja) <input type="text" data-rpk="lokasi" placeholder="SPTN Wilayah I Kadindi"></label>
+          <label class="fld">Wilayah kerja (keadaan umum lokasi disusun dari Profil Kawasan dan Profil Resor Satu Data Tambora) <select id="r_wilayah" data-rpk="wilayah"><option value="">Otomatis dari grid rencana</option></select></label>
           <div class="row2">
             <label class="fld">Akan dilaksanakan mulai <input type="date" data-rpk="tglMulai"></label>
             <label class="fld">Sampai <input type="date" data-rpk="tglSelesai"></label>
@@ -181,7 +212,7 @@
             <label class="fld">Tempat penyusunan <input type="text" data-rpk="tempatTtd" placeholder="Dompu"></label>
             <label class="fld">Tanggal penyusunan <input type="date" data-rpk="tanggalTtd"></label>
           </div>
-          <label class="chk"><input type="checkbox" data-rpk="narasiOk"> Narasi sudah diperiksa dan isian [ … ] sudah dilengkapi</label>
+          <label class="chk"><input type="checkbox" data-rpk="narasiOk"> Narasi sudah diperiksa</label>
         </div>
       </details>
     </section>
@@ -194,15 +225,15 @@
           <div class="pick-list" id="rResults"></div>
         </div>
         <div id="rTeam" class="team"></div>
-        <details class="sub-d">
-          <summary>Tambah anggota di luar daftar pegawai (Polri, TNI, MMP, MPA, masyarakat)</summary>
+        <details class="sub-d" id="rManBox" open>
+          <summary>Petugas di luar daftar pegawai (isi manual: Polri, TNI, MMP, MPA, masyarakat, pegawai baru)</summary>
           <div class="form" id="rManForm">
             <label class="fld">Nama <input type="text" data-m="nama" placeholder="Bripka Nama Lengkap"></label>
             <div class="row2">
-              <label class="fld">NIP / NRP / NIK <input type="text" data-m="nip"></label>
-              <label class="fld">Pangkat/Gol <input type="text" data-m="pangkat" placeholder="-"></label>
+              <label class="fld">NIP / NRP / NIK <input type="text" data-m="nip" inputmode="numeric"></label>
+              <label class="fld">Pangkat/Gol <input type="text" data-m="pangkat" placeholder="-" list="dlPangkat"></label>
             </div>
-            <label class="fld">Jabatan <input type="text" data-m="jabatan" placeholder="Anggota Polsek Pekat"></label>
+            <label class="fld">Jabatan <input type="text" data-m="jabatan" placeholder="Anggota Polsek Pekat" list="dlJabatan"></label>
             <label class="fld">Unsur <select data-m="unsur" id="rManUnsur"></select></label>
             <button class="btn ghost full" id="rManAdd" type="button">Tambahkan ke tim</button>
           </div>
@@ -241,7 +272,7 @@
     <section class="card">
       <details open>
         <summary><h2><span class="step">4</span> Lampiran</h2></summary>
-        <p class="muted">Peta Rencana Pelaksanaan Kegiatan dibuat otomatis dari nomor grid di langkah 1, memakai lapisan dan peta dasar di Profil Balai (tab LPK).</p>
+        <p class="muted">Peta kerja (Peta Rencana Pelaksanaan Kegiatan) dibuat otomatis dari nomor grid di langkah 1, memakai lapisan dan peta dasar di Profil Balai (tab LPK).</p>
         <label class="btn ghost full"><input type="file" id="rScanInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" multiple hidden>Unggah scan Surat Tugas (JPG, PNG, PDF)</label>
         <p class="status" id="rScanStatus"></p>
         <div id="rScans" class="scans"></div>
@@ -289,6 +320,21 @@
   </form>
 </dialog>
 
+<!-- Saran isian supaya ejaan pangkat, jabatan, dan nama satwa seragam -->
+<datalist id="dlPangkat">
+  <option value="-"><option value="Pengatur Muda (II/a)"><option value="Pengatur Muda Tingkat I (II/b)"><option value="Pengatur (II/c)"><option value="Pengatur Tingkat I (II/d)">
+  <option value="Penata Muda (III/a)"><option value="Penata Muda Tingkat I (III/b)"><option value="Penata (III/c)"><option value="Penata Tingkat I (III/d)">
+  <option value="Pembina (IV/a)"><option value="Pembina Tingkat I (IV/b)"><option value="PPPK">
+  <option value="Bripda"><option value="Briptu"><option value="Brigpol"><option value="Bripka"><option value="Aipda"><option value="Aiptu"><option value="Ipda"><option value="Iptu"><option value="AKP">
+  <option value="Prada"><option value="Pratu"><option value="Praka"><option value="Kopda"><option value="Koptu"><option value="Kopka"><option value="Serda"><option value="Sertu"><option value="Serka"><option value="Serma"><option value="Pelda"><option value="Peltu"><option value="Letda"><option value="Lettu"><option value="Kapten">
+</datalist>
+<datalist id="dlJabatan">
+  <option value="Anggota Polsek Pekat"><option value="Anggota Polsek Kempo"><option value="Anggota Polsek Tambora"><option value="Anggota Polsek Sanggar"><option value="Bhabinkamtibmas">
+  <option value="Babinsa Koramil Pekat"><option value="Babinsa Koramil Kempo"><option value="Babinsa Koramil Tambora"><option value="Babinsa Koramil Sanggar">
+  <option value="Anggota Masyarakat Mitra Polhut (MMP)"><option value="Anggota Masyarakat Peduli Api (MPA)"><option value="Anggota Kelompok Masyarakat (Pokmas)"><option value="Masyarakat">
+</datalist>
+<datalist id="satwaList"></datalist>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/shpjs@4.0.4/dist/shp.min.js"></script>
@@ -299,6 +345,8 @@
 <script src="js/parser.js"></script>
 <script src="js/map.js"></script>
 <script src="js/report.js"></script>
+<script src="js/profil.js"></script>
+<script src="js/wilayah.js"></script>
 <script src="js/export.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>

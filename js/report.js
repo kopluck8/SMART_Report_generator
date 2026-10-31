@@ -1,8 +1,10 @@
 /*
  * Model laporan dan HTML Laporan Pelaksanaan Kegiatan (LPK) Balai Taman Nasional Tambora.
- * Susunan mengikuti tata naskah laporan: kop, LAPORAN / TENTANG / judul dan pengesahan, lalu
- * A. Pendahuluan, B. Pelaksanaan Kegiatan, C. Hasil dan Pembahasan, D. Simpulan dan Saran, E. Penutup, lampiran.
- * Bagian bersama dengan RPK (tim per unsur, alat, anggaran, tata waktu, dasar hukum) juga ada di sini.
+ * Susunan mengikuti Memorandum Kepala Balai Nomor M.57/T.41/TU/PEG/02/2026 (Lampiran 3 dan 4):
+ * sampul, lembar pengesahan, daftar isi, daftar tabel, lalu kop dan LAPORAN / TENTANG / judul,
+ * 1. Pendahuluan, 2. Kegiatan yang dilaksanakan, 3. Hasil yang dicapai, 4. Simpulan dan saran, 5. Penutup,
+ * blok penyusun (tempat, tanggal, jabatan, nama, NIP), dan lampiran.
+ * Bagian bersama dengan RPK (sampul, pengesahan, tim per unsur dan peran, alat, anggaran, tata waktu, dasar) juga ada di sini.
  */
 (function () {
   "use strict";
@@ -49,8 +51,11 @@
   // Waktu track SMART disimpan sebagai jam lokal perangkat, jadi dibaca apa adanya.
   const clock = (ms) => new Date(ms).toISOString().substr(11, 5);
   const lines = (t) => String(t || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const listText = (arr) => arr.join(", ").replace(/, ([^,]+)$/, " dan $1");
+  // Perincian sesuai PUEBI: "A dan B", "A, B, dan C" (aman untuk unsur yang memuat koma)
+  const listText = (arr) => { const a = arr.filter((x) => x !== "" && x != null); return a.length < 3 ? a.join(a.length === 2 && a.some((x) => / dan /.test(x)) ? " serta " : " dan ") : `${a.slice(0, -1).join(", ")}, dan ${a[a.length - 1]}`; };
   const PH = (t) => `[${t}]`; // isian yang wajib dilengkapi penyusun
+  // Nama ilmiah yang dicetak miring di narasi (ditambah dari profil kawasan dan catatan SMART)
+  const LATIN = new Set();
 
   // Ejaan baku untuk label dari Data Model dan teks bawaan
   function fixText(s) {
@@ -64,14 +69,35 @@
   const isUnidentified = (key, label) => /belumada(di)?list/i.test(String(key || "").replace(/[^a-z]/gi, "")) || /^belum ada di (list|daftar)/i.test(label || "");
   // Nama ilmiah dicetak miring: "Kesambi - Schleichera oleosa" atau "Abavorana luctuosa"
   const LATIN_END = /(us|um|a|is|ii|i|ae|ensis|ata|ica|ina|osa|ides|ana|ella|eus|ia|es|ax|ix|ex|on|or|ens)$/;
+  const BINOM = /^[A-Z][a-z]+ (?:[a-z]{3,}|spp?\.?)(?: [a-z]{3,})?$/;
   function sci(name) {
     const s = String(name || "");
-    const m = s.match(/^(.*?)\s+-\s+-?\s*(.+)$/);
     const ital = (t) => esc(t).replace(/[^\s\/]+/g, (w) => (/^spp?\.?$/.test(w) ? w : `<i>${w}</i>`));
-    if (m) return `${esc(m[1])} - ${ital(m[2])}`;
+    // "Golkar - Kerinyuh - Chromolaena odorata": hanya bagian nama ilmiah (terakhir) yang miring
+    const parts = s.split(/\s+-\s+/);
+    if (parts.length > 1) {
+      const last = parts[parts.length - 1].replace(/^-\s*/, "");
+      return BINOM.test(last) ? `${esc(parts.slice(0, -1).join(" - "))} - ${ital(last)}` : `${esc(parts[0])} - ${ital(parts.slice(1).join(" - ").replace(/^-\s*/, ""))}`;
+    }
     const w = s.split(" ");
     if (w.length === 2 && /^[A-Z][a-z]{2,}$/.test(w[0]) && /^[a-z]{3,}$/.test(w[1]) && LATIN_END.test(w[1]) && !/^(lainnya|lain|biasa)$/.test(w[1])) return `<i>${esc(s)}</i>`;
     return esc(s);
+  }
+  // Nama jenis di kalimat: "Cikukua tanduk - Philemon buceroides" menjadi "Cikukua tanduk (Philemon buceroides)"; nama ilmiahnya dicetak miring
+  function spName(name) {
+    const parts = String(name || "").split(/\s+-\s+/).map((x) => x.replace(/^-\s*/, "").trim()).filter(Boolean);
+    const last = parts[parts.length - 1] || "";
+    if (!BINOM.test(last)) return parts.join(" - ");
+    const spp = /\sspp?\.?$/.test(last);
+    if (parts.length > 1 || spp || LATIN_END.test(last.split(" ")[1])) LATIN.add(spp ? last.split(" ")[0] : last);
+    return parts.length > 1 ? `${parts.slice(0, -1).join("/")} (${last})` : last;
+  }
+  // Miringkan nama ilmiah di HTML narasi: "Nama - Genus species", "(Genus species)", dan nama di daftar LATIN
+  function italicLatin(html) {
+    let s = html.replace(/(\s-\s)([A-Z][a-z]+ [a-z]{3,}(?: [a-z]{3,})?)(?=[\s,.;)]|$)/gm, "$1<i>$2</i>")
+      .replace(/\(([A-Z][a-z]{2,} [a-z]{3,})\)/g, (m, n) => (LATIN_END.test(n.split(" ")[1]) && !/^(lainnya|lain|biasa)$/.test(n.split(" ")[1]) ? `(<i>${n}</i>)` : m));
+    for (const n of LATIN) if (n) s = s.split(n).join(`<i>${n}</i>`);
+    return s.replace(/(?:<i>)+([^<]*)(?:<\/i>)+/g, "<i>$1</i>");
   }
 
   // Urutan dan warna kategori utama sesuai urutan hasil di LPK.
@@ -154,7 +180,7 @@
       "Sebelum berangkat dilakukan pengarahan (briefing) kepada anggota mitra mengenai jalur, pembagian tugas, keselamatan, dan cara mengenali serta mencatat temuan.",
       "Anggota mitra didampingi petugas Balai dalam mengenali, mendokumentasikan, dan melaporkan temuan; tindakan terhadap dugaan pelanggaran hanya dilakukan oleh petugas yang berwenang."
     ],
-    pembahasan: ["Peran unsur masyarakat selama kegiatan: {mitra}. [asal kelompok (MMP/MPA/Pokmas/desa), kontribusi seperti penunjuk jalan, informasi lokal, dan pencatatan, serta peningkatan kemampuan yang terlihat]"],
+    bahas: ["mitra"],
     saran: ["Melanjutkan pembinaan dan pelatihan MMP/MPA/Pokmas, termasuk penggunaan SMART Mobile, agar mitra dapat menyampaikan informasi gangguan kawasan secara mandiri dan cepat."],
     perlu: ["masyarakat"]
   };
@@ -164,10 +190,7 @@
       "Sebelum pelaksanaan dilakukan koordinasi dan pengarahan bersama unsur TNI/Polri mengenai sasaran, jalur, pembagian tugas, dan prosedur bertindak di lapangan.",
       "Apabila ditemukan dugaan tindak pidana kehutanan, tim mengamankan lokasi dan barang bukti, mendokumentasikan, dan melaporkan kepada pimpinan untuk ditindaklanjuti sesuai kewenangan; tindakan hukum dilakukan oleh penyidik yang berwenang."
     ],
-    pembahasan: [
-      "Peran unsur TNI/Polri selama kegiatan: {aparat}. [bentuk kegiatan bersama, koordinasi dengan Koramil/Polsek setempat, dan informasi gangguan dari aparat]",
-      "Temuan yang berindikasi tindak pidana kehutanan: [ada/tidak ada; bila ada: jenis, barang bukti, tindakan yang diambil, dan status penanganan]."
-    ],
+    bahas: ["aparat", "tipihut"],
     saran: ["Melanjutkan patroli bersama TNI/Polri pada lokasi dengan gangguan berulang serta memperkuat pertukaran informasi dengan Koramil dan Polsek setempat."],
     perlu: ["aparat"]
   };
@@ -194,16 +217,13 @@
       "Imbauan larangan membakar disampaikan secara langsung kepada masyarakat yang dijumpai di dalam dan sekitar kawasan."
     ],
     analisis: "Luas area bekas terbakar {akan }dihitung dari poligon tracking keliling GPS atau digitasi, dan dibedakan dari jumlah objek terbakar yang tercatat di SMART.",
-    pembahasan: [
-      "Hasil sosialisasi dan imbauan pencegahan kebakaran: [lokasi dan jumlah masyarakat yang diberi imbauan, materi yang disampaikan, dan tanggapan masyarakat].",
-      "Pemantauan titik panas (hotspot) selama kegiatan: [ada/tidak ada; bila ada: tanggal, lokasi, dan hasil pengecekan lapangan]."
-    ],
-    saran: ["Meningkatkan frekuensi patroli pencegahan pada puncak musim kemarau [bulan] di lokasi rawan, serta memastikan kesiapan peralatan pemadaman awal di pos dan kelompok MPA."],
+    bahas: ["sosialisasi", "hotspot"],
+    saran: ["Meningkatkan frekuensi patroli pencegahan pada puncak musim kemarau di lokasi rawan, serta memastikan kesiapan peralatan pemadaman awal di pos dan kelompok MPA."],
     alat: ALAT_KARHUT, fire: true
   };
   const join = (...ks) => ks.reduce((a, k) => ({ ...a, ...k,
-    konteks: [a.konteks, k.konteks].filter(Boolean).join(" "),
-    metode: [...(a.metode || []), ...(k.metode || [])], pembahasan: [...(a.pembahasan || []), ...(k.pembahasan || [])],
+    konteks: [a.konteks, k.konteks].filter(Boolean).join("\n"),
+    metode: [...(a.metode || []), ...(k.metode || [])], bahas: [...(a.bahas || []), ...(k.bahas || [])],
     saran: [...(a.saran || []), ...(k.saran || [])], perlu: [...(a.perlu || []), ...(k.perlu || [])], alat: [...(a.alat || []), ...(k.alat || [])],
     fire: a.fire || k.fire }), {});
   const KEGIATAN = [
@@ -245,10 +265,7 @@
         "Pada api aktif, tim melakukan pemadaman awal sesuai kemampuan dan peralatan, melaporkan kepada pimpinan, dan memastikan kondisi api sebelum meninggalkan lokasi."
       ],
       analisis: "Lokasi rawan kebakaran {akan }ditentukan dari sebaran bekas terbakar, titik api, dan aktivitas manusia berisiko per grid, lalu ditumpangsusunkan dengan sebaran potensi kawasan.",
-      pembahasan: [
-        "Lokasi rawan kebakaran yang teridentifikasi: [lokasi/grid, tipe vegetasi, dan faktor kerawanan seperti bahan bakar, akses, dan aktivitas manusia].",
-        "Potensi kawasan yang tercatat [ringkas nilai penting: satwa/tumbuhan dilindungi, sumber air] perlu dipertimbangkan dalam penentuan lokasi prioritas pencegahan karhutla."
-      ],
+      bahas: ["rawan", "potensi"],
       saran: ["Menetapkan lokasi rawan dan bekas terbakar hasil kegiatan ini sebagai sasaran patroli pencegahan karhutla pada musim kemarau berikutnya."]
     },
     { id: "kamera", judul: "SMART Patrol dalam Rangka Pemasangan dan Unduh Data Kamera Jebak untuk Pemantauan Satwa dan Deteksi Dini Kebakaran", alat: ALAT_KAMERA,
@@ -271,11 +288,7 @@
         "Data kamera diunduh ke media penyimpanan, diberi nama sesuai kode kamera dan tanggal, lalu diidentifikasi per kejadian independen dengan selang minimal 30 menit antar-rekaman jenis yang sama pada kamera yang sama."
       ],
       analisis: "Rekaman kamera jebak {akan }dianalisis per titik: jumlah hari aktif kamera (trap-days), jumlah foto/video, jumlah kejadian independen per jenis, dan indeks kelimpahan relatif (RAI = kejadian independen ÷ hari aktif × 100).",
-      pembahasan: [
-        "Rekap kamera jebak: [per kamera: kode, koordinat/grid, tanggal pasang, tanggal unduh, hari aktif, jumlah foto/video, jenis satwa terekam, dan kondisi kamera].",
-        "Rekaman aktivitas manusia atau indikasi kebakaran dari kamera jebak: [ada/tidak ada; uraian]."
-      ],
-      saran: ["Menjadwalkan pengunduhan data dan penggantian baterai berikutnya pada [tanggal], serta mengevaluasi titik kamera yang tidak merekam satwa."]
+      bahas: ["kamera"]
     },
     { id: "aparat", judul: "SMART Patrol Bersama TNI/POLRI", ...join(K_APARAT, {
       maksud: "pengamanan kawasan Taman Nasional Tambora secara terpadu bersama TNI/Polri untuk mencegah dan menanggulangi gangguan kawasan",
@@ -318,8 +331,8 @@
     const n = (keys) => (members || []).filter((m) => keys.includes(m.unsur)).length;
     const mas = n(["mmp", "mpa", "masyarakat"]), apa = n(["tni", "polri"]);
     return String(s || "").replace(/\{akan \}/g, rpk ? "akan " : "")
-      .replace(/\{mitra\}/g, mas ? `${nTxt(mas)} orang unsur masyarakat (MMP/MPA/Pokmas/masyarakat) ikut dalam tim` : "[jumlah anggota unsur masyarakat]")
-      .replace(/\{aparat\}/g, apa ? `${nTxt(apa)} orang unsur TNI/Polri ikut dalam tim` : "[jumlah anggota TNI/Polri]");
+      .replace(/\{mitra\}/g, mas ? `${nTxt(mas)} orang unsur masyarakat (MMP/MPA/Pokmas/masyarakat) ikut dalam tim` : "unsur masyarakat belum tercatat dalam tim")
+      .replace(/\{aparat\}/g, apa ? `${nTxt(apa)} orang unsur TNI/Polri ikut dalam tim` : "unsur TNI/Polri belum tercatat dalam tim");
   }
   // Metode umum (Profil) ditambah langkah khusus judul yang belum ada
   const metodeLines = (text, k) => {
@@ -336,12 +349,14 @@
 
   // Unsur tim pelaksana. Tabel dan narasi dikelompokkan: Balai, Polri, TNI, masyarakat (MMP/MPA/masyarakat)
   const UNSUR = { balai: "Balai Taman Nasional Tambora", polri: "Polri", tni: "TNI", mmp: "Masyarakat Mitra Polhut (MMP)", mpa: "Masyarakat Peduli Api (MPA)", masyarakat: "Masyarakat" };
+  const UNSUR_SHORT = { balai: "petugas Balai", polri: "personel Polri", tni: "personel TNI", mmp: "MMP", mpa: "MPA", masyarakat: "masyarakat" };
   const UNSUR_GROUPS = [
     { keys: ["balai"], label: "Petugas Balai Taman Nasional Tambora", short: "petugas Balai Taman Nasional Tambora", id: "NIP" },
     { keys: ["polri"], label: "Personel Kepolisian Negara Republik Indonesia (Polri)", short: "personel Polri", id: "NRP" },
     { keys: ["tni"], label: "Personel Tentara Nasional Indonesia (TNI)", short: "personel TNI", id: "NRP" },
     { keys: ["mmp", "mpa", "masyarakat"], label: "Unsur Masyarakat (MMP, MPA, dan Masyarakat)", short: "orang dari unsur masyarakat (MMP/MPA/masyarakat)", id: "NIK" }
   ];
+  const MASYARAKAT = ["mmp", "mpa", "masyarakat"], APARAT = ["tni", "polri"];
   function guessUnsur(m) {
     const t = `${m.jabatan || ""} ${m.pangkat || ""} ${m.nama || m.name || ""}`.toLowerCase();
     if (/polri|polsek|polres|polda|bhabinkamtibmas|\b(bripka|brigpol|brigadir|bripda|briptu|bharada|bharatu|bharaka|aiptu|aipda|ipda|iptu|akp|kompol)\b/.test(t)) return "polri";
@@ -358,27 +373,63 @@
     if (parts.length === 1) return `Tim pelaksana berjumlah ${nTxt(members.length)} orang ${parts[0].g.short}.`;
     return `Tim pelaksana merupakan tim gabungan berjumlah ${nTxt(members.length)} orang, terdiri atas ${listText(parts.map((x) => `${nTxt(x.n)} ${x.g.short}`))}.`;
   }
-  // Ringkas untuk halaman awal: "8 orang (5 petugas Balai TN Tambora, 1 Polri, 1 TNI, 1 masyarakat)"
+  // Ringkas untuk halaman pengesahan: "8 orang (5 petugas Balai TN Tambora, 1 Polri, 1 TNI, 1 masyarakat)"
   function teamShort(members) {
     const SH = ["petugas Balai TN Tambora", "Polri", "TNI", "masyarakat"];
     const parts = UNSUR_GROUPS.map((g, i) => ({ i, n: members.filter((m) => unsurGroup(m.unsur) === i).length })).filter((x) => x.n);
     return `${members.length} orang${parts.length > 1 ? ` (${parts.map((x) => `${x.n} ${SH[x.i]}`).join(", ")})` : parts.length ? ` ${SH[parts[0].i]}` : ""}`;
   }
-  // Tabel tim per unsur; label nomor identitas mengikuti unsur (NIP/NRP/NIK)
-  function teamTable(members, roleOf) {
-    let no = 0;
+  // Ringkas per unsur: "2 orang MMP dan 1 orang MPA"
+  const unsurCount = (ms) => listText([...new Set(ms.map((m) => m.unsur))].map((u) => `${ms.filter((m) => m.unsur === u).length} orang ${UNSUR_SHORT[u] || u}`));
+
+  /* ---------- Peran dalam tim (Memorandum: susunan tim dan peran masing-masing) ---------- */
+  const PERAN = [
+    { k: "Ketua Tim", tugas: "memimpin dan mengoordinasikan pelaksanaan kegiatan, menjaga keselamatan tim, dan bertanggung jawab atas laporan" },
+    { k: "Wakil Ketua Tim", tugas: "membantu ketua tim dan menggantikan tugasnya bila berhalangan" },
+    { k: "Pencatat Data SMART", tugas: "merekam jalur dan temuan menggunakan aplikasi SMART Mobile" },
+    { k: "Navigator", tugas: "menentukan arah dan jalur patroli menggunakan GPS dan peta kerja" },
+    { k: "Dokumentasi", tugas: "mendokumentasikan pelaksanaan kegiatan dan temuan" },
+    { k: "Anggota", tugas: "melaksanakan penyisiran, pengamatan, dan pendataan temuan" },
+    { k: "Pengamanan", tugas: "mendukung pengamanan tim dan penanganan dugaan tindak pidana kehutanan" },
+    { k: "Pemandu Lapangan", tugas: "menunjukkan jalur serta memberikan informasi kondisi lapangan dan gangguan kawasan" },
+    { k: "Regu Pemadam", tugas: "melakukan pemadaman awal apabila ditemukan api" },
+    { k: "Pengemudi", tugas: "mengemudikan kendaraan operasional" },
+    { k: "Operator Drone", tugas: "menerbangkan drone untuk pemantauan dari udara" },
+    { k: "Logistik", tugas: "menyiapkan perbekalan dan perlengkapan tim" }
+  ];
+  // Peran bawaan: ketua dari SMART/koordinator, pilot dari SMART, TNI/Polri pengamanan, masyarakat pemandu (MPA pada judul kebakaran: regu pemadam)
+  function defaultPeran(m, ctx = {}) {
+    if (m.isLeader || m.koordinator) return "Ketua Tim";
+    if (m.isPilot) return ctx.drone ? "Operator Drone" : "Pengemudi";
+    if (APARAT.includes(m.unsur)) return "Pengamanan";
+    if (m.unsur === "mpa" && ctx.fire) return "Regu Pemadam";
+    if (MASYARAKAT.includes(m.unsur)) return "Pemandu Lapangan";
+    return "Anggota";
+  }
+  const peranRank = (p) => { const i = PERAN.findIndex((x) => x.k === p); return i < 0 ? 99 : i; };
+  // "Ketua Tim (Nama): tugas;" per peran, berurutan sesuai daftar PERAN
+  function peranLines(members, peranOf) {
+    const by = new Map();
+    members.forEach((m) => { const p = peranOf(m) || "Anggota"; if (!by.has(p)) by.set(p, []); by.get(p).push(m); });
+    const rows = [...by.entries()].sort((a, b) => peranRank(a[0]) - peranRank(b[0]));
+    return rows.map(([p, ms], i) => `${p} (${ms.length === 1 ? ms[0].name || ms[0].nama : `${nTxt(ms.length)} orang`}): ${(PERAN.find((x) => x.k === p) || { tugas: "melaksanakan tugas sesuai arahan ketua tim" }).tugas}${i === rows.length - 1 ? "." : ";"}`);
+  }
+  // NIP 18 digit boleh pindah baris setelah tanggal lahir (8 digit pertama) bila kolom sempit; NRP/NIK tidak dipotong
+  const nipCell = (id) => { const f = fmtNip(id), m = f.match(/^(\d{8}) (\d{6} \d \d{3})$/); return m ? `${m[1]} ${nb(m[2])}` : nb(f); };
+  // Tabel tim per unsur; label nomor identitas mengikuti unsur (NIP/NRP/NIK); kolom peran dalam tim
+  function teamTable(members, peranOf) {
+    let no = 0, grp = 0;
     const rows = [];
     UNSUR_GROUPS.forEach((g, gi) => {
       const ms = members.filter((m) => unsurGroup(m.unsur) === gi);
       if (!ms.length) return;
-      rows.push(`<tr class="grp"><td colspan="5">${String.fromCharCode(65 + rows.filter((r) => r.startsWith('<tr class="grp"')).length)}. ${esc(g.label)} (${ms.length} orang; nomor identitas: ${g.id})</td></tr>`);
+      rows.push(`<tr class="grp"><td colspan="6">${String.fromCharCode(65 + grp++)}. ${esc(g.label)} (${ms.length} orang; nomor identitas: ${g.id})</td></tr>`);
       ms.forEach((m) => {
-        const role = roleOf ? roleOf(m) : "";
         const id = String(m.nip || "").trim();
-        rows.push(`<tr><td class="c">${++no}</td><td>${esc(m.name || m.nama)}${role ? ` <i>(${esc(role)})</i>` : ""}</td><td class="nw">${id ? esc(nb(fmtNip(id))) : "-"}</td><td>${esc(m.pangkat || "-")}</td><td>${esc(m.jabatan || (gi === 3 ? UNSUR[m.unsur] || "Masyarakat" : "-"))}</td></tr>`);
+        rows.push(`<tr><td class="c">${++no}</td><td>${esc(m.name || m.nama)}</td><td>${id ? esc(nipCell(id)) : "-"}</td><td>${esc(m.pangkat || "-")}</td><td>${esc(m.jabatan || (gi === 3 ? UNSUR[m.unsur] || "Masyarakat" : "-"))}</td><td>${esc((peranOf && peranOf(m)) || "Anggota")}</td></tr>`);
       });
     });
-    return `<table class="data team" data-block="tabel_anggota"><thead><tr><th>No</th><th>Nama</th><th>NIP/NRP/NIK</th><th>Pangkat/ Golongan</th><th>Jabatan/ Unsur</th></tr></thead><tbody>${rows.join("") || `<tr><td colspan="5" class="c">Belum ada anggota tim.</td></tr>`}</tbody></table>`;
+    return `<table class="data team" data-block="tabel_anggota"><thead><tr><th>No</th><th>Nama</th><th>NIP/NRP/NIK</th><th>Pangkat/ Golongan</th><th>Jabatan/ Unsur</th><th>Peran dalam Tim</th></tr></thead><tbody>${rows.join("") || `<tr><td colspan="6" class="c">Belum ada anggota tim.</td></tr>`}</tbody></table>`;
   }
   function alatTable(rows) {
     const r = rows.filter((x) => (x.nama || "").trim());
@@ -414,32 +465,106 @@
     const ba = ((dipa.nomor || "").match(/DIPA-?(\d+)/i) || [])[1] || "143";
     return `DIPA BA. ${ba} Balai Taman Nasional Tambora Tahun Anggaran ${year}, Akun ${akun}`;
   };
+
+  /* ---------- Dasar: diurutkan dari peraturan tertinggi sampai terendah (Memorandum, Lampiran 4) ---------- */
+  const DASAR_RANK = [
+    [/^Undang-Undang Dasar/i, 0], [/^Undang-Undang\b/i, 1], [/^Peraturan Pemerintah Pengganti/i, 2], [/^Peraturan Pemerintah\b/i, 3],
+    [/^Peraturan Presiden/i, 4], [/^Keputusan Presiden|^Instruksi Presiden/i, 5], [/^Peraturan Menteri/i, 6], [/^Keputusan Menteri/i, 7],
+    [/^Peraturan Direktur Jenderal|^Peraturan Dirjen/i, 8], [/^Keputusan Direktur Jenderal|^Keputusan Dirjen/i, 9], [/^Surat Edaran/i, 10],
+    [/^Nota Kesepahaman|^Perjanjian Kerja Sama|^Memorandum of Understanding/i, 11], [/^(Peraturan|Keputusan) Kepala Balai/i, 12],
+    [/^Daftar Isian Pelaksanaan Anggaran|^DIPA\b/i, 14], [/^Surat (Tugas|Perintah)/i, 15]
+  ];
+  const dasarRank = (s) => { for (const [re, r] of DASAR_RANK) if (re.test(s)) return r; return 13; };
+  const dasarYear = (s) => { const m = s.match(/Tahun (\d{4})/i) || s.match(/\/(\d{4})\b/); return m ? Number(m[1]) : 9999; };
+  // Urutan tetap stabil untuk aturan dengan tingkat dan tahun yang sama
+  const sortDasar = (list) => list.map((s, i) => ({ s, i, r: dasarRank(s), y: dasarYear(s) })).sort((a, b) => a.r - b.r || a.y - b.y || a.i - b.i).map((x) => x.s);
   function dasarList(profile, I, members) {
-    const d = lines(profile.dasarHukum || DEFAULT_DASAR);
+    const d = lines(profile.dasarHukum || DEFAULT_DASAR).map((x) => x.replace(/^\d+[.)]\s*/, ""));
     // Judul kegiatan kebakaran: tambah peraturan pengendalian karhutla bila belum ada di daftar Profil
     if (((I.keg && I.keg.fire) || isFire(I.judul)) && !d.some((x) => /P\.32\/MENLHK/i.test(x))) d.push(PERMEN_KARHUTLA);
     if (members.some((m) => m.unsur === "tni")) d.push(MOU_TNI);
     if (members.some((m) => m.unsur === "polri")) d.push(MOU_POLRI);
     if (I.nomorDipa) d.push(`Daftar Isian Pelaksanaan Anggaran (DIPA) ${profile.balai || "Balai Taman Nasional Tambora"} Tahun Anggaran ${I.year} Nomor ${I.nomorDipa}${I.tanggalDipa ? ` tanggal ${tglPanjang(I.tanggalDipa)}` : ""};`);
     d.push(`Surat Tugas Kepala ${profile.balai || "Balai Taman Nasional Tambora"} Nomor ${I.nomorST || "……………"}${I.tanggalST ? ` tanggal ${tglPanjang(I.tanggalST)}` : ""}.`);
-    return d;
+    // Tanda baca akhir disesuaikan setelah diurutkan: titik koma, kecuali butir terakhir
+    return sortDasar(d).map((x, i, a) => x.replace(/[;.]\s*$/, "") + (i === a.length - 1 ? "." : ";"));
   }
+  // Tata waktu: kolom per hari bila rentangnya paling lama 16 hari; lebih dari itu kolom per minggu (I-V tiap bulan) agar tetap terbaca pada huruf 11 pt
+  const ROMAWI = ["I", "II", "III", "IV", "V"];
   function ganttTable(rows) {
     const g0 = rows.reduce((a, r) => (r[1] < a ? r[1] : a), rows[0][1]), g1 = rows.reduce((a, r) => (r[2] > a ? r[2] : a), rows[0][2]);
     const gdays = [];
-    for (let d = g0; d <= g1 && gdays.length < 45; d = addDays(d, 1)) gdays.push(d);
+    for (let d = g0; d <= g1 && gdays.length < 370; d = addDays(d, 1)) gdays.push(d);
+    const weekly = gdays.length > 16, cols = [];
+    gdays.forEach((d) => {
+      const dt = parseISO(d), m = dt.getUTCMonth(), y = dt.getUTCFullYear(), w = Math.min(5, Math.ceil(dt.getUTCDate() / 7));
+      const key = weekly ? `${y}-${m}-${w}` : d, last = cols[cols.length - 1];
+      if (last && last.key === key) last.days.push(d);
+      else cols.push({ key, m, y, label: weekly ? ROMAWI[w - 1] : String(dt.getUTCDate()), days: [d] });
+    });
     const months = [];
-    gdays.forEach((d) => { const m = BULAN[parseISO(d).getUTCMonth()]; const last = months[months.length - 1]; if (last && last.m === m) last.n++; else months.push({ m, n: 1 }); });
-    return `<table class="data gantt"><thead><tr><th rowspan="2">No</th><th rowspan="2">Jenis Kegiatan</th>${months.map((m) => `<th colspan="${m.n}">${m.m}</th>`).join("")}</tr><tr>${gdays.map((d) => `<th class="d">${parseISO(d).getUTCDate()}</th>`).join("")}</tr></thead><tbody>${rows.map((r, i) => `<tr><td class="c">${i + 1}.</td><td>${esc(r[0])}</td>${gdays.map((d) => `<td class="${d >= r[1] && d <= r[2] ? "on" : ""}"></td>`).join("")}</tr>`).join("")}</tbody></table>`;
-  }
-  // Halaman awal: kop, LAPORAN / TENTANG / judul
-  function kopHtml(balai) {
-    return `<div class="kop">${window.SRG_KOP_LOGO ? `<img src="${window.SRG_KOP_LOGO}" alt="">` : ""}<div class="kop-t"><div>KEMENTERIAN KEHUTANAN</div><div>DIREKTORAT JENDERAL KONSERVASI SUMBER DAYA ALAM DAN EKOSISTEM</div><div class="big">${esc(balai.toUpperCase())}</div></div></div>`;
-  }
-  function titleHtml(jenis, judul) {
-    return `<div class="doc-title"><p>${esc(jenis)}</p><p>TENTANG</p><p>${esc(judul.toUpperCase())}</p></div>`;
+    cols.forEach((c) => { const last = months[months.length - 1]; if (last && last.m === c.m && last.y === c.y) last.n++; else months.push({ m: c.m, y: c.y, n: 1 }); });
+    const yrs = months.some((x) => x.y !== months[0].y);
+    return `<table class="data gantt${weekly ? " weekly" : ""}"><thead><tr><th rowspan="2">No</th><th rowspan="2">Tahapan Kegiatan</th>${months.map((x) => `<th colspan="${x.n}">${BULAN[x.m]}${yrs ? " " + x.y : ""}</th>`).join("")}</tr><tr>${cols.map((c) => `<th class="d">${c.label}</th>`).join("")}</tr></thead><tbody>${rows.map((r, i) => `<tr><td class="c">${i + 1}.</td><td>${esc(r[0])}</td>${cols.map((c) => `<td class="${c.days.some((d) => d >= r[1] && d <= r[2]) ? "on" : ""}"></td>`).join("")}</tr>`).join("")}</tbody></table>${weekly ? `<p class="fn">Angka romawi pada kolom menunjukkan minggu ke-I sampai ke-V setiap bulan.</p>` : ""}`;
   }
 
+  /* ---------- Halaman awal bersama LPK dan RPK ---------- */
+  const DEFAULT_ALAMAT = "Jl. Syech Muhammad No. 5 Dompu 84212";
+  const DEFAULT_KONTAK = "Telp. 0370-21919 Fax. 0370-21919, e-mail : tntambora@gmail.com";
+  // Kop surat sesuai Memorandum: instansi, nama Balai, alamat, dan kontak
+  function kopHtml(profile) {
+    const P = typeof profile === "string" ? { balai: profile } : profile || {};
+    const balai = P.balai || "Balai Taman Nasional Tambora", alamat = P.alamat ?? DEFAULT_ALAMAT, kontak = P.kontak ?? DEFAULT_KONTAK;
+    return `<div class="kop">${window.SRG_KOP_LOGO ? `<img src="${window.SRG_KOP_LOGO}" alt="">` : ""}<div class="kop-t"><div>KEMENTERIAN KEHUTANAN</div><div>DIREKTORAT JENDERAL KONSERVASI SUMBER DAYA ALAM DAN EKOSISTEM</div><div class="big">${esc(balai.toUpperCase())}</div>${alamat ? `<div class="addr">${esc(alamat)}</div>` : ""}${kontak ? `<div class="addr">${esc(kontak)}</div>` : ""}</div></div>`;
+  }
+  // LAPORAN (tebal), baris kosong, TENTANG, JUDUL KEGIATAN (tebal)
+  function titleHtml(jenis, judul) {
+    return `<div class="doc-title"><p class="b">${esc(jenis)}</p><p class="gap">&nbsp;</p><p>TENTANG</p><p class="b">${esc(judul.toUpperCase())}</p></div>`;
+  }
+  // Sampul seperti versi sebelumnya: judul, logo Balai, tim pelaksana, nomor ST dan waktu, tempat dan bulan
+  function coverHtml(o) {
+    return `<div class="cover"><p class="cv-title">${esc(o.jenis)}<br>${esc(o.judul.toUpperCase())}<br>${esc(o.balai.toUpperCase())}</p>
+      ${o.logo ? `<img class="cv-logo" src="${o.logo}" alt="">` : `<div class="cv-logo nologo">Logo Balai<br>(atur di Profil Balai)</div>`}
+      <p class="cv-by">OLEH:<br>TIM PELAKSANA KEGIATAN</p>
+      <p class="cv-st">${esc(o.nomorST || "ST. ……………")}<br>${esc(String(o.periode || "").toUpperCase())}</p>
+      <p class="cv-place">${esc((o.kota || "………").toUpperCase())}, ${esc(String(o.bulanTahun || "").toUpperCase())}</p></div>`;
+  }
+  const bulanTahun = (iso) => (iso ? `${BULAN[parseISO(iso).getUTCMonth()]} ${iso.substr(0, 4)}` : "");
+  // Blok tanda tangan; nama tidak ditebalkan (Memorandum, Lampiran 3 dan 4)
+  function sign(lines, name, nip, cls = "") {
+    return `<div class="sg${cls ? " " + cls : ""}">${lines.map((l) => `<div>${esc(l) || "&nbsp;"}</div>`).join("")}<div class="space"></div><div class="nm">${esc(name || "……………………………")}</div><div>NIP. ${esc(fmtNip(nip) || "……………………")}</div></div>`;
+  }
+  const kvTable = (kv) => `<table class="kv-plain">${kv.map(([k, v]) => `<tr><td>${esc(k)}</td><td>:</td><td>${esc(v)}</td></tr>`).join("")}</table>`;
+  // Lembar pengesahan: kop, LEMBAR PENGESAHAN, identitas kegiatan, lalu tanda tangan kiri, kanan, dan bawah tengah
+  function pengesahanHtml(profile, kv, s) {
+    return `${kopHtml(profile)}<h1 class="front" id="pengesahan">LEMBAR PENGESAHAN</h1>${kvTable(kv)}
+      <table class="sign memo"><tr><td>${sign([s.left.head, s.left.jab], s.left.nama, s.left.nip, "memo")}</td><td>${sign([s.right.head || "", s.right.jab], s.right.nama, s.right.nip, "memo")}</td></tr>
+      <tr><td colspan="2">${sign([s.bottom.head, s.bottom.jab], s.bottom.nama, s.bottom.nip, "memo")}</td></tr></table>`;
+  }
+  // Daftar isi dan daftar tabel. Di Word keduanya berupa field yang diperbarui otomatis saat dokumen dibuka (lengkap dengan nomor halaman).
+  function tocHtml(toc, tables) {
+    return `<h1 class="front pb">DAFTAR ISI</h1><div class="toc" data-toc="isi">${toc.map((e) => `<div class="toc-${e.lv}">${esc(e.text)}</div>`).join("")}</div>
+      <p class="toc-note noprint">Nomor halaman daftar isi dan daftar tabel terisi otomatis di file Word (pilih Ya saat Word menawarkan pembaruan field).</p>
+      <h1 class="front pb">DAFTAR TABEL</h1><div class="toc" data-toc="tabel">${tables.map((t) => `<div class="toc-1">${esc(t)}</div>`).join("")}</div>`;
+  }
+  // Blok penutup: Dibuat di / Pada tanggal / jabatan pembuat laporan / nama / NIP
+  function closingHtml(tempat, tanggal, jabatan, nama, nip) {
+    return `<table class="sign close" data-block="tanda_tangan"><tr><td></td><td>${sign([`Dibuat di ${tempat || "………"}`, `Pada tanggal ${tanggal}`, jabatan], nama, nip, "close")}</td></tr></table>`;
+  }
+  // Penomoran judul bagian dan tabel; daftar isi (judul tingkat 1-2) dan daftar tabel dikumpulkan sambil menyusun isi
+  function numbering() {
+    const toc = [], tables = [];
+    let tab = 0;
+    return {
+      toc, tables,
+      h1(text, cls = "sec", pb = false) { toc.push({ lv: 1, text }); return `<h1 class="${cls}${pb ? " pb" : ""}">${esc(text)}</h1>`; },
+      h2(text, cls = "", pb = false) { toc.push({ lv: 2, text }); return `<h2 class="${(cls + (pb ? " pb" : "")).trim()}">${esc(text)}</h2>`; },
+      h3: (text) => `<h3>${esc(text)}</h3>`,
+      cap(text) { tab++; tables.push(`Tabel ${tab} ${text}`); return `<p class="cap" data-seq="Tabel" data-n="${tab}">Tabel ${tab} ${esc(text)}</p>`; },
+      next: () => tab + 1
+    };
+  }
+  const para = (html, lv = 2) => `<p class="para lv${lv}">${html}</p>`;
   /* ---------- Label ---------- */
   function makeLabeler(dicts) {
     const unknown = new Map();
@@ -487,7 +612,9 @@
     return "";
   }
 
+
   /* ---------- Model ---------- */
+  const WIL = () => window.SRGWilayah;
   function buildModel(patrol, dicts, settings, layers) {
     const L = makeLabeler(dicts);
     const isSpeciesAttr = (k) => /^(jenis(satwa|tumbuhan|biota)|spesies|species)/i.test(k);
@@ -507,18 +634,19 @@
       const mem = {
         ...m, smartName, name: (dir && dir.nama) || man.nama || smartName, nip: (dir && dir.nip) || man.nip || m.employeeId,
         jabatan: (dir && dir.jabatan) || man.jabatan || "", pangkat: (dir && dir.pangkat) || man.pangkat || "",
-        inDirectory: !!dir, manualOk: !!(man.nama && man.jabatan), rank: dir ? dir.rank : 1e6 + members.length, fromSmart: true
+        inDirectory: !!dir, manualOk: !!(man.nama && man.jabatan), rank: dir ? dir.rank : 1e6 + members.length, fromSmart: true, key: "s:" + k
       };
       mem.unsur = dir ? "balai" : man.unsur || guessUnsur(mem) || "";
       mem.unsurOk = !!(dir || man.unsur);
       members.push(mem);
     }));
-    // Anggota yang ikut tetapi tidak tercatat di SMART (mis. TNI/Polri, MMP/MPA)
+    // Anggota yang ikut tetapi tidak tercatat di SMART (mis. TNI/Polri, MMP/MPA), dari daftar pegawai atau isian manual
     (settings.extraMembers || []).forEach((x, i) => {
       if (!(x.nama || "").trim()) return;
       const id = String(x.nip || "").replace(/\D/g, ""), dir = directory.get(id);
       members.push({ name: (dir && dir.nama) || x.nama, nip: x.nip || "", jabatan: (dir && dir.jabatan) || x.jabatan || "", pangkat: (dir && dir.pangkat) || x.pangkat || "",
-        unsur: dir ? "balai" : x.unsur || guessUnsur(x) || "masyarakat", unsurOk: true, inDirectory: !!dir, manualOk: true, rank: dir ? dir.rank : 2e6 + i, extra: true, smartName: x.nama });
+        unsur: dir ? "balai" : x.unsur || guessUnsur(x) || "masyarakat", unsurOk: true, inDirectory: !!dir, manualOk: true, rank: dir ? dir.rank : 2e6 + i, extra: true, smartName: x.nama,
+        key: "x:" + (x.nip || x.nama) });
     });
     members.sort((a, b) => unsurGroup(a.unsur) - unsurGroup(b.unsur) || a.rank - b.rank);
     const leader = members.find((m) => m.isLeader);
@@ -543,14 +671,16 @@
         waypoints.push(w);
         w.grid = gridLayer ? layerValue(gridLayer, w.x, w.y) : "";
         w.zona = zonaLayer ? layerValue(zonaLayer, w.x, w.y) : "";
-        w.resort = resortLayer ? layerValue(resortLayer, w.x, w.y).replace(/^resor[t]?\s+/i, "") : "";
+        // Resor mengikuti batas resor 2026 (Satu Data Tambora); lapisan resor peta dipakai bila batas 2026 tidak tersedia
+        const r26 = WIL() ? WIL().resorAt(w.x, w.y) : null;
+        w.resort = r26 ? r26.nama : resortLayer ? layerValue(resortLayer, w.x, w.y).replace(/^resor[t]?\s+/i, "") : "";
         const obsList = w.observations.length ? w.observations : [{ category: "", attributes: [], photos: [] }];
         obsList.forEach((o) => {
           const top = (o.category || "").split(".")[0];
-          const attrs = o.attributes.map((a) => ({
-            key: a.key, label: L.attr(a.key), raw: a.values,
-            text: a.values.map((v) => (v.kind === "item" ? L.item(v.value, a.key) : v.kind === "number" ? fmtNum(v.value) : v.kind === "bool" ? (v.value ? "Ya" : "Tidak") : v.value)).join(", ")
-          })).filter((a) => a.text !== "");
+          const attrs = o.attributes.map((a) => {
+            const vals = a.values.map((v) => (v.kind === "item" ? L.item(v.value, a.key) : v.kind === "number" ? fmtNum(v.value) : v.kind === "bool" ? (v.value ? "Ya" : "Tidak") : v.value));
+            return { key: a.key, label: L.attr(a.key), raw: a.values, vals, free: a.values.every((v) => v.kind === "text"), text: vals.join(", ") };
+          }).filter((a) => a.text !== "");
           const get = (k) => attrs.find((a) => a.key === k);
           const sp = attrs.find((a) => isSpeciesAttr(a.key));
           const jumlah = attrs.find((a) => a.key === "jumlah" && a.raw[0] && a.raw[0].kind === "number");
@@ -584,12 +714,12 @@
     const groups = tops.map((t) => {
       const items = observations.filter((o) => o.top === t).sort((a, b) => (a.wp.date + a.wp.time).localeCompare(b.wp.date + b.wp.time));
       const subs = [];
-      for (const o of items) { let s = subs.find((x) => x.key === o.category); if (!s) subs.push((s = { key: o.category, label: o.catLabel, n: 0 })); s.n++; }
+      for (const o of items) { let s = subs.find((x) => x.key === o.category); if (!s) subs.push((s = { key: o.category, label: o.catLabel, n: 0, items: [] })); s.n++; s.items.push(o); }
       const species = new Map();
       for (const o of items.filter((x) => x.species && !x.unidentified)) {
         const k = o.speciesKey || o.species;
-        if (!species.has(k)) species.set(k, { name: o.species, records: 0, total: 0, unit: o.unit });
-        const s = species.get(k); s.records++; if (o.count != null) s.total += o.count;
+        if (!species.has(k)) species.set(k, { name: o.species, records: 0, total: 0, unit: o.unit, items: [] });
+        const s = species.get(k); s.records++; s.items.push(o); if (o.count != null) s.total += o.count;
       }
       return { top: t, label: items[0].topLabel, color: color[t], items, subs, coords: new Set(items.map((o) => coordKey(o.wp))).size,
         species: [...species.values()].sort((a, b) => b.records - a.records), unidentified: items.filter((o) => o.unidentified).length };
@@ -614,11 +744,15 @@
     const uniq = (arr) => [...new Set(arr.filter(Boolean))];
     const sortNum = (a, b) => (parseFloat(a) || 0) - (parseFloat(b) || 0) || String(a).localeCompare(String(b));
     const obsWps = waypoints.filter((w) => w.observations.length);
+    // Wilayah kerja otomatis dari titik dan jalur patroli (batas resor 2026)
+    const track = dayLines.flatMap((l) => l.coords), step = Math.max(1, Math.ceil(track.length / 2000));
+    const pts = [...waypoints.map((w) => [w.x, w.y]), ...track.filter((_, i) => i % step === 0).map((c) => [c[0], c[1]])];
     return {
       patrol, members, leader, days, observations, waypoints, groups, photos, dayLines, color, tops, duplicates,
       modes: [...modes.entries()].map(([mode, km]) => ({ mode, km: Math.round(km * 100) / 100, drone: isDrone(mode) })),
       grids: uniq(waypoints.map((w) => w.grid)).sort(sortNum), zonas: uniq(waypoints.map((w) => w.zona)), resorts: uniq(waypoints.map((w) => w.resort)),
-      hasLayers: { grid: !!gridLayer, zonasi: !!zonaLayer, resort: !!resortLayer },
+      hasLayers: { grid: !!gridLayer, zonasi: !!zonaLayer, resort: !!resortLayer || !!WIL() },
+      wilayahAuto: WIL() ? WIL().detect(pts) : null,
       totals: {
         distance: days.reduce((s, d) => s + d.distance, 0), km: Math.round(days.reduce((s, d) => s + d.km, 0) * 100) / 100,
         kmGround: Math.round(days.filter((d) => !d.drone).reduce((s, d) => s + d.km, 0) * 100) / 100,
@@ -631,12 +765,19 @@
   }
 
   /* ---------- Info kegiatan turunan ---------- */
-  // "... di Kawasan TN Tambora" menjadi "... di Wilayah Kerja X Kawasan TN Tambora" agar kata "di" tidak ganda
+  // "... di Kawasan TN Tambora" menjadi "... di Wilayah Kerja X, Kawasan TN Tambora" agar kata "di" tidak ganda
   const judulLengkap = (judul, lokasi) => {
     if (!lokasi) return judul;
     const m = judul.match(/^(.*?)\s+di\s+(Kawasan .*)$/i);
     return m ? `${m[1]} di Wilayah Kerja ${lokasi}, ${m[2]}` : `${judul} di Wilayah Kerja ${lokasi}`;
   };
+  // Pilihan wilayah: isian form, isian lokasi lama (teks), tebakan dari titik patroli/grid, lalu nama stasiun SMART
+  function pickWilayah(chosen, oldText, auto, station) {
+    const w = WIL();
+    if (!w) return { W: null, auto: false };
+    const v = chosen || w.fromText(oldText) || (auto ? auto.v : "") || w.fromText(station);
+    return { W: w.resolve(v), auto: !chosen };
+  }
   function deriveInfo(M, info, profile) {
     const p = M.patrol;
     const mulai = info.tglMulai || p.startDate, selesai = info.tglSelesai && info.tglSelesai >= mulai ? info.tglSelesai : (info.tglMulai && info.tglMulai > p.endDate ? info.tglMulai : p.endDate);
@@ -644,31 +785,165 @@
     const dipa = (window.SRG_DIPA || {})[year] || {};
     const looksST = /^ST\.|\/T\.\d+\//i.test(p.id || "");
     const judul = info.judul || p.mandate || "SMART Patrol";
-    const lokasi = info.lokasi || p.station || "";
+    const wil = pickWilayah(info.wilayah, info.lokasi, M.wilayahAuto, p.station);
+    const lokasi = wil.W ? wil.W.lokasi : info.lokasi || p.station || "";
     const grids = info.grids || (M.grids.length ? M.grids.join(", ") : "");
     const penyusun = (info.penyusunNip && M.members.find((m) => m.employeeId && String(m.employeeId) === String(info.penyusunNip))) || M.leader || M.members[0];
     const akun = (info.akun || DEFAULT_AKUN).trim();
     const rab = rabRows(info.rab || []), total = rab.reduce((s, r) => s + r.total, 0);
+    const keg = kegiatanOf(judul), fire = isFire(judul) || !!(keg || {}).fire || M.observations.some((o) => o.fire);
+    const peranMap = info.peran || {}, ctx = { fire, drone: M.days.some((d) => d.drone) };
     return {
-      judul, lokasi, judulLengkap: judulLengkap(judul, lokasi), grids,
-      gridText: grids ? `Grid ${grids.replace(/,\s*([^,]+)$/, ", dan $1")}` : "",
+      judul, lokasi, judulLengkap: judulLengkap(judul, lokasi), grids, W: wil.W, wilayahAuto: wil.auto, share: M.wilayahAuto ? M.wilayahAuto.counts : [],
+      gridText: grids ? `Grid ${listText(String(grids).split(/[,;]\s*/).map((x) => x.trim()).filter(Boolean))}` : "",
       resort: info.resort || M.resorts.join(", "), akun, rab, total,
       sumberAnggaran: sumberAnggaran(year, akun), anggaran: rupiah(total), tanggalST: info.tanggalST || "", nomorDipa: dipa.nomor || "", tanggalDipa: dipa.tanggal || "",
       nomorST: (info.nomorST || "").trim() || (looksST ? p.id : ""), mulai, selesai, hari: Math.round((parseISO(selesai) - parseISO(mulai)) / 864e5) + 1,
-      tanggalLaporan: info.tanggalLaporan || addDays(selesai, 3), kota: info.tempatTtd || profile.kota || "", penyusun,
-      rencanaHari: Math.max(0, Number(info.rencanaHari ?? 1)), year, alat: info.alat || alatFor(kegiatanOf(judul)), metodeText: profile.metode, keg: kegiatanOf(judul), fire: isFire(judul) || !!(kegiatanOf(judul) || {}).fire || M.observations.some((o) => o.fire)
+      tanggalLaporan: info.tanggalLaporan || addDays(selesai, 3), kota: info.tempatTtd || profile.kota || "", penyusun, ketua: M.leader || penyusun,
+      rencanaHari: Math.max(0, Number(info.rencanaHari ?? 1)), year, alat: info.alat || alatFor(keg), metodeText: profile.metode, keg, fire,
+      facts: info.facts || {}, peranOf: (m) => peranMap[m.key] || defaultPeran(m, ctx)
     };
   }
 
-  /* ---------- Teks otomatis (bisa diedit di laporan) ---------- */
+  /* ---------- Isian lapangan: pilihan pengganti narasi bebas ----------
+   * Petugas cukup memilih; jawaban dipakai langsung di kalimat pembahasan, simpulan, dan saran.
+   * type: pilih (satu pilihan), multi (beberapa pilihan), angka, tanggal, kamera (tabel kamera jebak).
+   * show(ctx): tampil bila relevan dengan data patroli dan judul; req(ctx): wajib diisi. */
+  const NONE_KENDALA = "tidak ada kendala berarti";
+  const FAKTA = [
+    { k: "cuaca", label: "Cuaca selama kegiatan", type: "pilih",
+      opts: ["cerah", "cerah berawan", "berawan", "berubah-ubah (cerah dan hujan)", "hujan ringan", "hujan lebat", "berkabut", "berangin kencang"] },
+    { k: "kendala", label: "Kendala di lapangan", type: "multi",
+      opts: [NONE_KENDALA, "medan yang terjal dan licin", "akses jalan yang rusak", "hujan yang menghambat pergerakan tim", "kabut tebal yang membatasi jarak pandang",
+        "sinyal GPS yang lemah di bawah tajuk rapat", "daya baterai perangkat yang terbatas", "gangguan pada aplikasi SMART Mobile", "jarak tempuh ke lokasi yang jauh"] },
+    { k: "pelakuAM", label: "Pelaku aktivitas manusia", type: "pilih", show: (c) => c.amx,
+      opts: ["tidak dijumpai di lokasi", "dijumpai dan diberi imbauan", "dijumpai, diberi imbauan, dan didata identitasnya", "dijumpai dan diserahkan kepada pihak berwenang untuk diproses lebih lanjut"] },
+    { k: "tindakanAM", label: "Tindakan tim terhadap aktivitas manusia (SMART tidak mencatat tindakan)", type: "multi", show: (c) => c.amx && !c.amTindakan,
+      opts: ["dokumentasi dan pencatatan koordinat temuan", "imbauan atau teguran lisan kepada pelaku", "pemasangan tanda larangan", "pemusnahan sarana pelanggaran (jerat, gubuk, atau alat)",
+        "pengamanan barang bukti", "pelaporan kepada pimpinan untuk ditindaklanjuti"] },
+    { k: "apiKondisi", label: "Kondisi terakhir api saat tim meninggalkan lokasi", type: "pilih", show: (c) => c.apiAktif, req: (c) => c.apiAktif,
+      opts: ["padam total", "padam, masih berasap", "dilokalisasi, belum padam sepenuhnya", "masih menyala dan dilaporkan untuk penanganan lanjutan"] },
+    { k: "apiAlat", label: "Alat pemadaman yang digunakan", type: "multi", show: (c) => c.apiAktif,
+      opts: ["pompa punggung (jet shooter)", "pemukul api (gepyok)", "garu atau cangkul", "ranting dan dahan", "air dari jeriken"] },
+    { k: "apiKendala", label: "Kendala pemadaman", type: "multi", show: (c) => c.apiAktif,
+      opts: ["angin kencang", "sumber air jauh", "medan terjal", "bahan bakar kering melimpah", "personel terbatas", "peralatan terbatas"] },
+    { k: "apiLuas", label: "Perkiraan luas terbakar (ha)", type: "angka", show: (c) => c.fireRec },
+    { k: "apiUkur", label: "Cara mengukur luas terbakar", type: "pilih", show: (c) => c.fireRec,
+      opts: ["tracking keliling GPS", "digitasi citra satelit", "estimasi visual"] },
+    { k: "apiSumber", label: "Dugaan sumber api", type: "pilih", show: (c) => c.fireRec,
+      opts: ["pembukaan lahan dengan api", "perburuan (pembakaran untuk menumbuhkan tunas rumput pemikat rusa)", "pengambilan madu dengan pengasapan", "penggembalaan ternak",
+        "api yang ditinggalkan (puntung rokok atau api unggun)", "rambatan dari luar kawasan", "belum diketahui"] },
+    { k: "apiDasar", label: "Dasar penentuan sumber api", type: "pilih", show: (c) => c.fireRec && !!c.f.apiSumber && c.f.apiSumber !== "belum diketahui",
+      opts: ["pengamatan langsung tim", "keterangan masyarakat atau pihak lain", "tanda-tanda yang ditemukan di lapangan"] },
+    { k: "rawanFaktor", label: "Faktor kerawanan kebakaran yang diamati", type: "multi", show: (c) => c.keg === "identifikasi" || c.cegah || c.fireRec,
+      opts: ["serasah dan rumput kering melimpah", "dekat jalan atau jalur aktivitas masyarakat", "dekat lahan garapan atau permukiman", "bekas terbakar tahun sebelumnya",
+        "lokasi penggembalaan ternak", "jauh dari sumber air"] },
+    { k: "sosJumlah", label: "Jumlah masyarakat yang menerima imbauan (orang)", type: "angka", show: (c) => c.cegah },
+    { k: "sosDesa", label: "Desa asal masyarakat yang menerima imbauan", type: "multi", show: (c) => c.cegah && c.desa.length > 0, opts: (c) => c.desa },
+    { k: "sosMateri", label: "Materi imbauan", type: "multi", show: (c) => c.cegah,
+      opts: ["larangan membakar hutan dan lahan", "bahaya api yang ditinggalkan", "pembukaan lahan tanpa bakar", "pelaporan kejadian kebakaran", "larangan perburuan dan penebangan liar"] },
+    { k: "hotspot", label: "Pemeriksaan titik panas (hotspot)", type: "pilih", show: (c) => c.cegah,
+      opts: ["tidak ada informasi titik panas selama kegiatan", "titik panas telah diperiksa dan tidak ditemukan api", "titik panas telah diperiksa, ditemukan api, dan ditangani"] },
+    { k: "hotspotN", label: "Jumlah titik panas yang diperiksa", type: "angka", show: (c) => c.cegah && /diperiksa/.test(c.f.hotspot || "") },
+    { k: "mitraPeran", label: "Peran unsur masyarakat dalam tim", type: "multi", show: (c) => c.mitra,
+      opts: ["menunjukkan jalur dan lokasi rawan", "memberikan informasi gangguan kawasan", "membantu pencatatan temuan", "membantu pemadaman awal", "menyampaikan imbauan kepada warga"] },
+    { k: "aparatPeran", label: "Peran personel TNI/Polri", type: "multi", show: (c) => c.aparat,
+      opts: ["pengamanan tim di lapangan", "penyampaian imbauan dan penyuluhan hukum", "pengumpulan bahan keterangan", "pengamanan barang bukti", "koordinasi dengan Koramil dan Polsek setempat"] },
+    { k: "tipihut", label: "Dugaan tindak pidana kehutanan", type: "pilih", show: (c) => c.aparat || c.kegAparat,
+      opts: ["tidak ditemukan", "ditemukan dan telah dilaporkan kepada pimpinan", "ditemukan dan telah diserahkan kepada penyidik"] },
+    { k: "kamera", label: "Kamera jebak yang dipasang atau diunduh", type: "kamera", show: (c) => c.kamera, req: (c) => c.kamera },
+    { k: "kameraManusia", label: "Rekaman aktivitas manusia pada kamera jebak", type: "pilih", show: (c) => c.kamera,
+      opts: ["tidak ada", "ada dan telah dilaporkan kepada pimpinan"] },
+    { k: "kameraJadwal", label: "Rencana pengecekan kamera berikutnya", type: "tanggal", show: (c) => c.kamera },
+    { k: "tindakLanjut", label: "Waktu tindak lanjut lokasi prioritas", type: "pilih",
+      opts: ["pada patroli rutin berikutnya", "dalam 1 (satu) minggu", "dalam 1 (satu) bulan", "pada awal musim kemarau berikutnya"] }
+  ];
+  const KAMERA_KONDISI = ["baik", "baterai lemah", "kartu memori penuh", "rusak", "hilang", "dipindahkan"];
+  const KAMERA_COLS = [
+    { k: "kode", label: "Kode kamera", w: "70px" }, { k: "pasang", label: "Tgl pasang", type: "date", w: "118px" }, { k: "unduh", label: "Tgl unduh", type: "date", w: "118px" },
+    { k: "foto", label: "Foto/video", type: "number", w: "60px" }, { k: "satwa", label: "Satwa terekam", list: "satwaList" }, { k: "kondisi", label: "Kondisi", type: "select", opts: KAMERA_KONDISI, w: "96px" }
+  ];
+  const attrOf = (o, k) => o.attrs.find((a) => a.key === k);
+  const attrIs = (o, k, re) => { const a = attrOf(o, k); return !!a && (a.raw.some((v) => re.test(String(v.value))) || re.test(a.text)); };
+  // Konteks isian: data patroli dan judul menentukan isian mana yang ditanyakan
+  function faktaCtx(M, I) {
+    const am = M.groups.find((x) => x.top === "aktivitasmanusia");
+    const amx = am ? am.items.filter((o) => !o.fire) : [], fires = M.observations.filter((o) => o.fire);
+    const id = I.keg ? I.keg.id : "";
+    return {
+      f: I.facts || {}, amx: amx.length > 0, amTindakan: amx.some((o) => attrOf(o, "tindakan")), fireRec: fires.length > 0,
+      apiAktif: fires.some((o) => attrIs(o, "tipetemuan", /masih ?terbakar|api ?aktif/i) || /apiaktif|titikapi/i.test(o.category)),
+      keg: id, cegah: /^cegah/.test(id), kamera: id === "kamera", kegAparat: /aparat/.test(id),
+      mitra: M.members.some((m) => MASYARAKAT.includes(m.unsur)), aparat: M.members.some((m) => APARAT.includes(m.unsur)),
+      desa: WIL() ? WIL().desaOf(I.W) : []
+    };
+  }
+  const faktaShown = (ctx) => FAKTA.filter((x) => !x.show || x.show(ctx));
+  const faktaOpts = (x, ctx) => (typeof x.opts === "function" ? x.opts(ctx) : x.opts || []);
+  const kameraRows = (f) => (f.kamera || []).filter((r) => String(r.kode || "").trim());
+  const filled = (x, v) => (x.type === "multi" ? Array.isArray(v) && v.length > 0 : x.type === "kamera" ? (v || []).some((r) => String(r.kode || "").trim()) : v != null && String(v).trim() !== "");
+  const hariAktif = (r) => (r.pasang && r.unduh && r.unduh >= r.pasang ? Math.round((parseISO(r.unduh) - parseISO(r.pasang)) / 864e5) : null);
+
+  /* ---------- Bantuan narasi ---------- */
+  const cap1 = (s) => String(s || "").charAt(0).toUpperCase() + String(s || "").slice(1);
+  const jam = (s) => String(s || "").replace(":", ".");
+  // Nilai pilihan Data Model ditulis huruf kecil di tengah kalimat; singkatan (HHBK, SMART, R4) tetap
+  const lowerVocab = (s) => String(s || "").replace(/\b([A-Z])([a-z]+)\b/g, (m, a, b) => a.toLowerCase() + b)
+    .replace(/\s*\/\s*/g, "/").replace(/(\d+)\s*-\s*(\d+)\s*mdpl/gi, (m, a, b) => `${num(a)}–${num(b)} mdpl`);
+  // Jumlah catatan per nilai atribut, terbanyak dulu
+  function tally(items, key) {
+    const m = new Map();
+    items.forEach((o) => { const a = attrOf(o, key); (a ? a.vals : []).forEach((v) => { if (String(v).trim()) m.set(v, (m.get(v) || 0) + 1); }); });
+    return [...m.entries()].map(([v, n]) => ({ v, n })).sort((a, b) => b.n - a.n);
+  }
+  const tallyText = (t, unit = "") => listText(t.map((x) => `${lowerVocab(x.v)} (${x.n}${unit ? " " + unit : ""})`));
+  const subsOf = (items) => { const m = new Map(); items.forEach((o) => m.set(o.catLabel, (m.get(o.catLabel) || 0) + 1)); return [...m.entries()].map(([v, n]) => ({ v, n })); };
+  // "infrastruktur (2 catatan, yaitu papan larangan dan pos pendakian) dan pal batas (1 catatan, yaitu beton)"
+  function ragam(items, groupLabel) {
+    const subs = subsOf(items);
+    if (subs.length === 1 && lowerVocab(subs[0].v) === lowerVocab(groupLabel)) { const tip = tally(items, "tipetemuan"); return tip.length ? tallyText(tip) : ""; }
+    return listText(subs.map((x) => {
+      const tip = tally(items.filter((o) => o.catLabel === x.v), "tipetemuan").map((y) => lowerVocab(y.v)).filter((v) => v !== lowerVocab(x.v));
+      return `${lowerVocab(x.v)} (${x.n} catatan${tip.length ? `, yaitu ${listText(tip)}` : ""})`;
+    }));
+  }
+  const mostCommon = (arr) => { const m = new Map(); arr.filter(Boolean).forEach((v) => m.set(v, (m.get(v) || 0) + 1)); return [...m.entries()].sort((a, b) => b[1] - a[1]).map((x) => x[0])[0] || ""; };
+  const uniqGrids = (items) => [...new Set(items.map((o) => o.wp.grid).filter(Boolean))].sort((a, b) => (parseFloat(a) || 0) - (parseFloat(b) || 0));
+  // Jumlah objek per satuan: ["25 batang", "3 ekor"]
+  function sumByUnit(items) {
+    const m = new Map();
+    items.forEach((o) => { if (o.count == null) return; const u = (o.unit || "objek").toLowerCase(); m.set(u, (m.get(u) || 0) + o.count); });
+    return [...m.entries()].map(([u, n]) => `${fmtNum(n)} ${u}`);
+  }
+  const musim = (iso) => { const m = parseISO(iso).getUTCMonth() + 1; return m >= 5 && m <= 10 ? "musim kemarau" : m === 4 || m === 11 ? "masa peralihan musim" : "musim hujan"; };
+  const minutes = (t) => { const [h, m, s] = String(t || "0:0:0").split(":").map(Number); return h * 60 + (m || 0) + (s || 0) / 60; };
+  // Ringkasan ground check: tipe ekosistem, kelas ketinggian, tutupan lahan
+  function gcParts(gc) {
+    if (!gc) return [];
+    const eko = gc.items.filter((o) => /ekosis|ekosistem/.test(o.category)), tut = gc.items.filter((o) => /tutupan/.test(o.category));
+    const out = [];
+    const k4 = tally(eko, "klasifikasi4"), k3 = tally(eko, "klasifikasi3");
+    if (k4.length) out.push(`tipe ekosistem ${tallyText(k4, "titik")}${k3.length ? ` pada kelas ketinggian ${listText(k3.map((x) => lowerVocab(x.v)))}` : ""}`);
+    const k2 = tally(tut, "klasifikasi02"), k1 = k2.length ? k2 : tally(tut, "klasifikasi01");
+    if (k1.length) out.push(`tutupan lahan ${tallyText(k1, "titik")}`);
+    return out;
+  }
+  const KAWASAN_LAMA = "Taman Nasional Tambora merupakan kawasan konservasi yang ditetapkan untuk melindungi keunikan ekosistem pascaletusan tahun 1815, melalui Keputusan Menteri Lingkungan Hidup dan Kehutanan Nomor SK.111/Menlhk-II/2015 dengan luas 71.645,64 hektare, dan dikelola oleh Balai Taman Nasional Tambora.";
+
+  /* ---------- Narasi otomatis LPK (tetap bisa diedit di laporan) ---------- */
   function autoNotes(M, I) {
-    const t = M.totals;
-    const where = I.gridText ? ` yang difokuskan pada ${I.gridText}` : "";
+    const t = M.totals, Wl = WIL(), W = I.W, f = I.facts || {}, K = I.keg, C = faktaCtx(M, I);
+    const kt = (x) => kegText(x, false, M.members), num1 = (a) => a.map((x, i) => `${i + 1}. ${kt(x)}`);
     const g = (top) => M.groups.find((x) => x.top === top);
-    const am = g("aktivitasmanusia"), fires = M.observations.filter((o) => o.fire);
-    const zonaTxt = M.zonas.length ? `, zona ${listText(M.zonas.map((z) => z.replace(/^zona\s+/i, "")))}` : "";
-    const resorTxt = I.resort ? `, Resor ${I.resort}` : "";
-    const K = I.keg, kt = (x) => kegText(x, false, M.members), num1 = (a) => a.map((x, i) => `${i + 1}. ${kt(x)}`);
+    const am = g("aktivitasmanusia"), amx = am ? am.items.filter((o) => !o.fire) : [], fires = M.observations.filter((o) => o.fire);
+    const bio = M.groups.filter((x) => BIODIV.includes(x.top)), gc = g("groundcheck"), ft = g("fitur"), sw = g("satwaliar");
+    const where = I.gridText ? ` yang difokuskan pada ${I.gridText}` : "";
+    const modeTxt = M.modes.map((m) => (m.drone ? `±${num(m.km, 2)} km lintasan penerbangan drone` : `±${num(m.km, 2)} km menggunakan moda ${lowerVocab(m.mode)}`)).join(" dan ") || `±${num(t.km, 2)} km`;
+    const zonaTxt = listText(M.zonas.map((z) => "zona " + lowerVocab(z.replace(/^zona\s+/i, ""))));
+    const kajian = Wl ? Wl.kajian() : "";
+    const pelaksana = W ? W.pelaksana : "petugas resor";
+    const kendala = (f.kendala || []).filter((x) => x !== NONE_KENDALA);
+    const gp = gcParts(gc);
     const tujuan = K && K.tujuan ? num1(K.tujuan) : I.fire ? [
       "1. Mendeteksi secara dini indikasi kebakaran hutan dan lahan, termasuk titik api aktif dan bekas terbakar;",
       "2. Memantau lokasi rawan kebakaran serta aktivitas manusia yang berpotensi menjadi sumber api;",
@@ -681,84 +956,237 @@
       "3. Memeriksa kondisi sarana prasarana, sumber air, dan batas kawasan;",
       "4. Menyediakan data spasial yang valid sebagai dasar pengambilan kebijakan pengelolaan kawasan."
     ];
-    const daysTxt = M.days.map((d) => `${tglPanjang(d.date)} pukul ${d.start}–${d.end}`).join("; ");
-    const modeTxt = M.modes.map((m) => (m.drone ? `±${num(m.km, 2)} km lintasan penerbangan drone` : `±${num(m.km, 2)} km dengan moda ${m.mode.toLowerCase()}`)).join(" dan ");
+    const ruang = (K && K.ruang ? K.ruang.map(kt) : [
+      `Pelacakan dan pendataan indikasi aktivitas manusia${I.fire ? " dan indikasi kebakaran" : ""} di dalam kawasan;`,
+      "Pengamatan kondisi tutupan hutan, keberadaan satwa liar dan tumbuhan, serta potensi titik api;",
+      "Imbauan kepada masyarakat yang ditemukan beraktivitas di dalam kawasan;",
+      "Pencatatan data lapangan menggunakan aplikasi SMART Mobile, termasuk titik koordinat dan dokumentasi visual temuan."
+    ]).map((x) => x.replace(/[;.]\s*$/, ";"));
+    const daysTxt = M.days.map((d) => `${tglPanjang(d.date)} pukul ${jam(d.start)}–${jam(d.end)}`).join("; ");
+    const tahap = [];
+    if (I.rencanaHari > 0) tahap.push(`persiapan, berupa penyusunan rencana pelaksanaan kegiatan dan pemeriksaan peralatan, pada ${periodeSd(addDays(I.mulai, -I.rencanaHari), addDays(I.mulai, -1))}`);
+    tahap.push(`pelaksanaan patroli dan pengambilan data di lapangan pada ${periodeSd(I.mulai, I.selesai)}`);
+    if (I.tanggalLaporan > I.selesai) tahap.push(`pengolahan data dan penyusunan laporan pada ${periodeSd(addDays(I.selesai, 1), I.tanggalLaporan)}`);
+
     const notes = {
       latar: [
-        "Taman Nasional Tambora merupakan kawasan konservasi yang ditetapkan untuk melindungi keunikan ekosistem pascaletusan tahun 1815, melalui Keputusan Menteri Lingkungan Hidup dan Kehutanan Nomor SK.111/Menlhk-II/2015 dengan luas 71.645,64 hektare. Kawasan ini dikelola oleh Balai Taman Nasional Tambora untuk mempertahankan nilai-nilai konservasi sumber daya alam hayati dan ekosistemnya.",
-        `Pengelolaan kawasan dibagi ke dalam beberapa wilayah kerja, salah satunya ${I.lokasi}. Tekanan terhadap kawasan, seperti perambahan, pembalakan liar, perburuan satwa, dan kebakaran hutan dan lahan, menuntut pola pengamanan yang berbasis data dan teknologi.${K && K.konteks ? " " + K.konteks : ""}`,
+        ...(Wl && Wl.data.kawasan ? Wl.kawasanParas() : [KAWASAN_LAMA]),
+        K && K.konteks ? kt(K.konteks) : "",
+        Wl && Wl.data.sptn.length ? Wl.wilayahPara(W, false) : `Pengelolaan kawasan dibagi ke dalam beberapa wilayah kerja, salah satunya ${I.lokasi}.`,
         `Oleh karena itu, dilaksanakan kegiatan ${I.judulLengkap} pada tanggal ${periodeSd(I.mulai, I.selesai)}${where}. Dengan metode Spatial Monitoring and Reporting Tool (SMART), setiap temuan di lapangan dapat terdeteksi secara dini, terdokumentasi secara akurat, dan ditindaklanjuti secara cepat.`
-      ].join("\n"),
+      ].filter(Boolean).join("\n"),
       maksud: [
         `Kegiatan ${I.judulLengkap} dimaksudkan sebagai upaya ${K && K.maksud ? K.maksud : `${I.fire ? "pencegahan kebakaran hutan dan lahan serta " : ""}pengamanan dan pemantauan kawasan Taman Nasional Tambora secara terukur dan berbasis data`}${I.gridText ? `, khususnya pada ${I.gridText}` : ""}.`,
         "Adapun tujuan kegiatan ini adalah:", ...tujuan
       ].join("\n"),
       ruanglingkup: [
-        `Ruang lingkup kegiatan secara kewilayahan mencakup wilayah kerja ${I.lokasi}, Balai Taman Nasional Tambora${I.gridText ? `, khususnya pada ${I.gridText}` : ""}. Ruang lingkup materi kegiatan meliputi:`,
-        ...(K && K.ruang ? num1(K.ruang) : [
-          `1. Melakukan pelacakan dan pendataan terhadap indikasi aktivitas manusia${I.fire ? " dan indikasi kebakaran" : ""} di dalam kawasan;`,
-          "2. Mengamati kondisi tutupan hutan, keberadaan satwa liar dan tumbuhan, serta potensi titik api;",
-          "3. Memberikan imbauan kepada masyarakat yang ditemukan beraktivitas di dalam kawasan;",
-          "4. Melakukan input data lapangan menggunakan aplikasi SMART Mobile, termasuk titik koordinat dan dokumentasi visual temuan."])
+        "Ruang lingkup kegiatan ini meliputi:",
+        `1. Lokasi: wilayah kerja ${W ? (W.type === "resor" ? `${W.nama}, ${W.sptn.nama}` : W.nama) : I.lokasi}, Balai Taman Nasional Tambora${I.gridText ? `, khususnya pada ${I.gridText}` : ""};`,
+        `2. Waktu: tanggal ${periodeSd(I.mulai, I.selesai)} sesuai Surat Tugas;`,
+        "3. Objek kegiatan:", ...ruang.map((x, i) => `${String.fromCharCode(97 + i)}. ${x}`),
+        "4. Batasan: data yang dilaporkan terbatas pada temuan yang direkam tim menggunakan aplikasi SMART Mobile di sepanjang jalur patroli selama periode kegiatan, sehingga tidak menggambarkan kondisi seluruh wilayah kerja."
       ].join("\n"),
       lokasi: [
-        `Lokasi kegiatan berada di wilayah kerja ${I.lokasi}${resorTxt}${I.gridText ? `, pada ${I.gridText}` : ""}${zonaTxt}. Jalur patroli yang terekam sepanjang ${modeTxt || "±" + num(t.km, 2) + " km"}.`,
-        PH("Uraikan kondisi spesifik lokasi: topografi, tutupan vegetasi, aksesibilitas, kondisi jalan atau jalur patroli, sumber air, dan permukiman terdekat")
+        W && Wl ? Wl.keadaan(W, I.share, false) : `Lokasi kegiatan berada di wilayah kerja ${I.lokasi}.`,
+        [`Jalur patroli ${I.gridText ? `melintasi ${I.gridText}` : "berada di dalam kawasan"}${zonaTxt ? ` pada ${zonaTxt}` : ""}, dengan panjang lintasan yang terekam ${modeTxt}.`,
+          gp.length ? `Hasil ground check pada ${gc.coords} titik koordinat menunjukkan ${gp.join(", dengan ")}.` : "",
+          f.cuaca ? `Cuaca selama kegiatan umumnya ${f.cuaca}.` : ""].filter(Boolean).join(" ")
       ].join("\n"),
       waktu: [
-        `Kegiatan ${I.judulLengkap} dilaksanakan selama ${nTxt(I.hari)} hari, terhitung mulai tanggal ${periodeSd(I.mulai, I.selesai)} sesuai Surat Tugas. Waktu tersebut merupakan keseluruhan waktu kerja tim, termasuk persiapan, perjalanan menuju lokasi, pelaksanaan patroli, dan kembali ke kantor.`,
+        `Kegiatan ${I.judulLengkap} dilaksanakan selama ${nTxt(I.hari)} hari, terhitung mulai tanggal ${periodeSd(I.mulai, I.selesai)} sesuai Surat Tugas, termasuk perjalanan menuju lokasi, pelaksanaan patroli, dan kembali ke kantor. Tahapan kegiatan adalah sebagai berikut:`,
+        ...tahap.map((x, i) => `${i + 1}. ${cap1(x)}${i === tahap.length - 1 ? "." : ";"}`),
         `Perekaman data SMART dilakukan pada ${nTxt(t.days)} hari, yaitu ${daysTxt}. Jam pada tabel berikut adalah sesi perekaman SMART (awal dan akhir track yang terekam), bukan keseluruhan waktu kerja harian tim.`
       ].join("\n"),
-      metode: metodeLines(I.metodeText, K).map((x, i) => `${i + 1}. ${x}`).join("\n"),
+      metode: [
+        `Data yang dikumpulkan terdiri atas data primer dan data sekunder. Data primer diperoleh melalui pengamatan langsung di lapangan serta perekaman jalur dan temuan menggunakan aplikasi SMART Mobile, sedangkan data sekunder berupa peta kerja Balai, batas wilayah kerja resor${kajian ? `, dan ${kajian}` : ""}. Lokasi pengamatan ditentukan secara sengaja (purposive sampling) berdasarkan ${K && K.id === "kamera" ? "jalur satwa, sumber air, dan lokasi rawan kebakaran" : "grid sasaran, kerawanan gangguan, dan potensi kawasan"}.`,
+        "Kegiatan dilaksanakan berdasarkan Keputusan Direktur Jenderal Konservasi Sumber Daya Alam dan Ekosistem Nomor 74 Tahun 2025 tentang Panduan Patroli Berbasis Spatial Monitoring and Reporting Tool (SMART), dengan tahapan sebagai berikut:",
+        ...metodeLines(I.metodeText, K).map((x, i) => `${i + 1}. ${x}`)
+      ].join("\n"),
       analisis: [
         "Data hasil patroli diunduh dari SMART Mobile ke SMART Desktop, kemudian diverifikasi meliputi kesesuaian kategori temuan, koordinat, tanggal, foto, dan kemungkinan pencatatan ganda.",
-        `Data yang telah diverifikasi dianalisis secara deskriptif kuantitatif: jumlah catatan per kategori, jumlah titik koordinat unik, jumlah jenis yang teridentifikasi, serta sebaran temuan per grid patroli 1 km × 1 km, zona, dan resor melalui tumpang susun (overlay) dengan peta kerja Balai. Panjang lintasan dihitung dari track GPS per hari dan dipisahkan menurut moda${M.modes.some((m) => m.drone) ? " (lintasan darat dan penerbangan drone)" : ""}. Hasil analisis disajikan dalam tabel, peta sebaran, dan dokumentasi.`,
+        `Data yang telah diverifikasi dianalisis secara deskriptif kuantitatif: jumlah catatan per kategori, jumlah titik koordinat unik, jumlah jenis yang teridentifikasi, serta sebaran temuan per grid patroli 1 km × 1 km, zona, dan resor melalui tumpang susun (overlay) dengan peta kerja Balai. Panjang lintasan dihitung dari track GPS per hari dan dipisahkan menurut moda${M.modes.some((m) => m.drone) ? " (lintasan darat dan penerbangan drone)" : ""}. Hasil analisis disajikan dalam tabel, peta sebaran, dan dokumentasi, sedangkan matriks data hasil kegiatan dan matriks analisis data disajikan pada Lampiran 2 dan Lampiran 3.`,
         ...(K && K.analisis ? [kt(K.analisis)] : [])
       ].join("\n"),
-      hasil: `Selama pelaksanaan kegiatan, tim mencatat ${t.obs} catatan temuan pada ${t.coords} titik koordinat unik${I.gridText ? ` di ${I.gridText}` : ""}${resorTxt ? " wilayah" + resorTxt.replace(/^,/, "") : ""}, terdiri atas ${listText(M.groups.map((x) => `${x.items.length} catatan ${x.label.toLowerCase()}`))}. Satu titik koordinat dapat memuat lebih dari satu catatan, sehingga jumlah catatan tidak sama dengan jumlah titik lokasi atau jumlah kejadian.`,
-      pembahasan: "", kesimpulan: "", saran: "",
-      penutup: `Demikian laporan pelaksanaan kegiatan ${I.judulLengkap} ini disusun sebagai pertanggungjawaban pelaksanaan Surat Tugas Nomor ${I.nomorST || "……………"} dan sebagai bahan pertimbangan pimpinan dalam pengambilan kebijakan pengelolaan kawasan Taman Nasional Tambora. Atas perhatian dan arahan pimpinan, kami ucapkan terima kasih.`
+      hasil: t.obs ? `Selama pelaksanaan kegiatan, tim mencatat ${t.obs} catatan temuan pada ${t.coords} titik koordinat unik${I.gridText ? ` di ${I.gridText}` : ""}, terdiri atas ${listText(M.groups.map((x) => `${x.items.length} catatan ${lowerVocab(x.label)}`))}. Satu titik koordinat dapat memuat lebih dari satu catatan, sehingga jumlah catatan tidak sama dengan jumlah titik lokasi atau jumlah kejadian. Ringkasan setiap kategori disajikan pada uraian dan tabel berikut, sedangkan rincian setiap catatan disajikan pada Lampiran 2 (Matriks Data Hasil Kegiatan) dan sebaran temuan pada Lampiran 3 (Matriks Analisis Data).`
+        : "Selama pelaksanaan kegiatan tidak terdapat catatan temuan yang direkam menggunakan aplikasi SMART Mobile.",
+      pembahasan: "", kesimpulan: "", saran: "", penutup: ""
     };
+
+    /* Hasil per kategori */
     for (const gr of M.groups) {
-      const subs = gr.subs.map((s) => `${s.label.toLowerCase()} (${s.n})`).join(", ");
-      let sp = "";
+      const label = lowerVocab(gr.label), isBio = BIODIV.includes(gr.top);
+      const rg = isBio && gr.top !== "satwaliar" ? "" : ragam(gr.items, gr.label);
+      let s = `Tim mencatat ${gr.items.length} catatan ${label} pada ${gr.coords} titik koordinat${rg ? `, berupa ${rg}` : ""}.`;
       if (gr.species.length || gr.unidentified) {
-        sp = ` Dari ${gr.items.length} catatan tersebut, ${gr.species.length} jenis telah teridentifikasi${gr.species.length ? `, antara lain ${gr.species.slice(0, 5).map((s) => s.name).join(", ")}` : ""}`;
-        sp += gr.unidentified ? `, sedangkan ${gr.unidentified} catatan berstatus "Belum ada di daftar aplikasi", yaitu jenisnya belum tersedia dalam daftar jenis aplikasi SMART sehingga ${PH("jelaskan: sudah diidentifikasi sebagai … / masih perlu identifikasi lanjutan")} dan tidak dihitung sebagai jenis tersendiri.` : ".";
+        s += ` Dari ${gr.items.length} catatan tersebut, ${gr.species.length} jenis telah teridentifikasi${gr.species.length ? `, antara lain ${listText(gr.species.slice(0, 5).map((x) => spName(x.name)))}` : ""}.`;
+        if (gr.unidentified) {
+          const ket = [...new Set(gr.items.filter((o) => o.unidentified).map((o) => (attrOf(o, "keterangan") || {}).text).filter(Boolean))];
+          s += ` Sebanyak ${gr.unidentified} catatan berstatus "Belum ada di daftar aplikasi", yaitu jenisnya belum tersedia dalam daftar jenis aplikasi SMART${ket.length ? `; berdasarkan keterangan tim, catatan tersebut adalah ${listText(ket)}` : " dan masih memerlukan identifikasi lanjutan"}. Catatan ini tidak dihitung sebagai jenis tersendiri.`;
+        }
       }
-      notes["hasil_" + gr.top] = `Tim mencatat ${gr.items.length} catatan ${gr.label.toLowerCase()} pada ${gr.coords} titik koordinat, berupa ${subs}.${sp} Rincian catatan disajikan pada tabel berikut:`;
-      if (gr.top === "aktivitasmanusia" && gr.subs.some((s) => /penggembalaan|ternak|madu|hhbk/i.test(s.label)))
-        notes["hasil_" + gr.top] += `\nUntuk catatan penggembalaan dan pengambilan hasil hutan bukan kayu (HHBK) seperti madu: ${PH("jumlah orang/ternak bila tercatat, status akses atau izin, penggunaan api, imbauan atau edukasi yang diberikan, dan tindak lanjut")}. Catatan aktivitas manusia tidak otomatis merupakan pelanggaran sampai diverifikasi.`;
+      if (gr.subs.some((x) => /penggembalaan|pengembalaan|ternak/i.test(x.label))) s += " Data kelompok penggembala, asal, dan kode tanda ternak dicatat pada Lampiran 2.";
+      notes["hasil_" + gr.top] = s + " Ringkasan catatan disajikan pada tabel berikut:";
     }
-    // Pembahasan: menghubungkan lokasi, aktivitas manusia, vegetasi, api, penanganan, dan keterbatasan pengamatan
+
+    /* Pembahasan */
     const pem = [], kes = [], sar = [];
-    const prioritas = am ? [...new Set(am.items.map((o) => o.wp.grid).filter(Boolean))] : [];
-    if (am) pem.push(`Catatan aktivitas manusia (${am.items.length} catatan pada ${am.coords} titik koordinat) terutama berupa ${listText(am.subs.map((s) => `${s.label.toLowerCase()} (${s.n})`))}${prioritas.length ? ` dan terkonsentrasi di Grid ${listText(prioritas)}` : ""}. Hal ini menunjukkan masih adanya interaksi masyarakat dengan kawasan yang perlu dipantau. ${PH("hubungkan dengan kondisi lokasi, akses, dan musim")}`);
-    if (fires.length) pem.push(`Indikasi kebakaran tercatat pada ${fires.length} catatan. Untuk api aktif: waktu penemuan ${PH("jam")}, tindakan tim ${PH("dipadamkan/dilokalisasi/dilaporkan")}, alat yang digunakan ${PH("…")}, kendala ${PH("…")}, dan kondisi terakhir ${PH("padam/masih berasap/perlu pemeriksaan ulang")}. Luas terbakar ${PH("… ha")} diukur dengan ${PH("metode: tracking keliling GPS/digitasi citra/estimasi visual")}${PH("tanggal kejadian bila diketahui")}; sumber api ${PH("bedakan pengamatan langsung, informasi pihak lain, dan dugaan")}. Angka jumlah pada tabel menunjukkan objek yang dihitung (mis. batang terbakar), bukan luas kebakaran.`);
-    const bio = M.groups.filter((x) => BIODIV.includes(x.top));
-    if (bio.length) pem.push(`Pemantauan keanekaragaman hayati mencatat ${listText(bio.map((x) => `${x.items.length} catatan ${x.label.toLowerCase()} (${x.species.length} jenis teridentifikasi${x.unidentified ? `, ${x.unidentified} belum ada di daftar aplikasi` : ""})`))}. ${PH("kaitkan dengan kondisi vegetasi dan habitat di jalur patroli; jelaskan satuan jumlah satwa: individu/koloni/sarang, dan dasar identifikasi jenis penting")}`);
-    const gc = g("groundcheck"), ft = g("fitur");
-    if (gc) pem.push(`Ground check pada ${gc.items.length} titik memberikan data tutupan lahan aktual. Klasifikasi tutupan lahan didasarkan pada ${PH("dasar klasifikasi: pengamatan visual struktur vegetasi/kriteria tutupan lahan yang digunakan")}.`);
-    if (ft) pem.push(`Pengamatan fitur (${ft.items.length} catatan, berupa ${listText(ft.subs.map((s) => s.label.toLowerCase()))}) memberikan informasi kondisi sarana prasarana, batas kawasan, dan sumber air. ${PH("jelaskan kondisi yang diamati, termasuk mata air, dan alasan perlu/tidak perlu tindak lanjut")}`);
-    if (K) pem.push(...(K.pembahasan || []).map(kt));
-    pem.push(`Lintasan yang terekam sepanjang ${modeTxt || "±" + num(t.km, 2) + " km"}. Keterbatasan pengamatan: ${PH("cuaca, akses, waktu perekaman yang tidak mencakup seluruh hari kerja, sinyal GPS, dan hal lain yang memengaruhi data")}.`);
-    if (M.duplicates.length) pem.push(`Terdapat ${M.duplicates.length} kelompok catatan dengan kategori, jenis, tanggal, dan koordinat yang sama. ${PH("jelaskan apakah merupakan pengamatan berbeda atau pencatatan ganda berdasarkan waktu/ID temuan")}`);
-    kes.push(am ? `Masih terdapat ${am.items.length} catatan aktivitas manusia di dalam kawasan pada ${am.coords} titik koordinat, berupa ${listText(am.subs.map((s) => s.label.toLowerCase()))}.` : "Tidak tercatat aktivitas manusia yang mengganggu kawasan selama patroli.");
-    if (fires.length) kes.push(`Tercatat ${fires.length} catatan indikasi kebakaran; ${PH("kondisi terakhir api aktif dan hasil penanganan")}.`);
-    if (bio.length) kes.push(`Keanekaragaman hayati yang tercatat meliputi ${listText(bio.map((x) => `${x.species.length} jenis ${x.label.toLowerCase()} teridentifikasi`))}.`);
-    kes.push(`Kondisi sarana prasarana dan batas kawasan: ${ft ? PH("ringkas kondisi") : PH("tidak ada catatan fitur; jelaskan bila ada pengamatan")}. Kondisi sumber air: ${PH("…")}. Kondisi tutupan lahan: ${gc ? PH("ringkas hasil ground check") : PH("…")}.`);
-    if (prioritas.length) sar.push(`Menetapkan Grid ${listText(prioritas)} sebagai lokasi prioritas patroli lanjutan, dilaksanakan oleh ${PH("pelaksana")} pada ${PH("waktu tindak lanjut")}.`);
-    if (fires.length) sar.push(`Melakukan pemeriksaan ulang bara/api pada lokasi kebakaran dalam ${PH("waktu")} serta pendalaman sumber api bersama ${PH("pihak terkait")}.`);
-    if (am) sar.push("Menindaklanjuti catatan aktivitas manusia melalui verifikasi lapangan, imbauan, dan edukasi kepada masyarakat sesuai prosedur.");
+    const amGrids = uniqGrids(am ? am.items : []);
+    // Desa binaan dan akses resor tempat sebagian besar temuan aktivitas manusia (batas resor 2026)
+    const resAM = Wl ? Wl.data.resor.find((r) => r.nama === mostCommon(amx.map((o) => o.wp.resort))) : null;
+    const ad = Wl ? Wl.aksesDesa(resAM ? { type: "resor", resor: resAM } : W, I.share) : null;
+    if (amx.length) {
+      const pel = tally(amx, "pelanggaran"), ya = (pel.find((x) => /^ya$/i.test(x.v)) || {}).n || 0, bukan = (pel.find((x) => /^(bukan|tidak)/i.test(x.v)) || {}).n || 0;
+      const tind = tally(amx, "tindakan"), akt = tally(amx, "keaktifan");
+      let s = `Catatan aktivitas manusia${fires.length ? " di luar kebakaran" : ""} (${amx.length} catatan) berupa ${ragam(amx, "")}${uniqGrids(amx).length ? `, berada di Grid ${listText(uniqGrids(amx))}` : ""}.`;
+      s += ya || bukan ? ` Berdasarkan penilaian tim, ${[ya ? `${ya} catatan merupakan dugaan pelanggaran` : "", bukan ? `${bukan} catatan bukan pelanggaran` : ""].filter(Boolean).join(" dan ")}.` : " Catatan aktivitas manusia tidak otomatis merupakan pelanggaran sampai diverifikasi.";
+      if (akt.length) s += ` Status aktivitas saat ditemukan: ${tallyText(akt)}.`;
+      if (tind.length) s += ` Tindakan yang tercatat di SMART berupa ${tallyText(tind)}.`;
+      else if ((f.tindakanAM || []).length) s += ` Tindakan yang dilakukan tim berupa ${listText(f.tindakanAM)}.`;
+      if (f.pelakuAM) s += ` Pelaku aktivitas ${f.pelakuAM}.`;
+      s += ad && ad.desa ? ` Lokasi temuan berada di wilayah Resor ${ad.resor.nama}, yang memiliki desa binaan ${ad.desa}${ad.akses ? ` serta dapat dijangkau dengan ${ad.akses}` : ""}, sehingga interaksi masyarakat dengan kawasan perlu terus dipantau, terutama pada ${musim(I.mulai)}.`
+        : ` Kegiatan berlangsung pada ${musim(I.mulai)}, sehingga interaksi masyarakat dengan kawasan perlu terus dipantau.`;
+      if (amx.some((o) => /pengembalaan|penggembalaan|ternak/i.test(o.catLabel))) s += " Penggembalaan ternak di dalam kawasan perlu ditangani melalui pendataan kelompok penggembala dan pembinaan bersama pemerintah desa.";
+      pem.push(s);
+    }
+    if (fires.length) {
+      const tip = tally(fires, "tipetemuan"), sebab = tally(fires, "penyebabkebakaran"), tind = tally(fires, "tindakan"), jml = sumByUnit(fires);
+      const haSmart = fires.filter((o) => /^(ha|hektar|hektare)$/i.test(o.unit || "")).reduce((s, o) => s + (o.count || 0), 0);
+      let s = `Indikasi kebakaran tercatat pada ${fires.length} catatan, berupa ${tallyText(tip.length ? tip : subsOf(fires))}${uniqGrids(fires).length ? ` di Grid ${listText(uniqGrids(fires))}` : ""}${jml.length ? `, dengan jumlah objek tercatat ${listText(jml)}` : ""}.`;
+      if (sebab.length) s += ` Penyebab kebakaran menurut catatan SMART: ${tallyText(sebab)}.`;
+      if (tind.length) s += ` Tindakan yang tercatat: ${tallyText(tind)}.`;
+      if (C.apiAktif) {
+        s += ` Terhadap api aktif, tim melakukan pemadaman awal${(f.apiAlat || []).length ? ` menggunakan ${listText(f.apiAlat)}` : ""}${(f.apiKendala || []).length ? `, dengan kendala ${listText(f.apiKendala)}` : ""}.`;
+        if (f.apiKondisi) s += ` Kondisi terakhir api saat tim meninggalkan lokasi: ${f.apiKondisi}.`;
+      }
+      if (Number(f.apiLuas) > 0) s += ` Luas area terbakar diperkirakan ±${fmtNum(Number(f.apiLuas))} ha${f.apiUkur ? `, diukur dengan ${f.apiUkur}` : ""}.`;
+      else if (haSmart > 0) s += ` Luas area terbakar yang tercatat di SMART ±${fmtNum(haSmart)} ha.`;
+      else s += " Luas area terbakar belum diukur; angka jumlah pada tabel menunjukkan objek yang dihitung (misalnya batang terbakar), bukan luas kebakaran.";
+      if (f.apiSumber) s += f.apiSumber === "belum diketahui" ? " Sumber api belum diketahui." : ` Dugaan sumber api adalah ${f.apiSumber}${f.apiDasar ? `, berdasarkan ${f.apiDasar}` : ""}.`;
+      pem.push(s);
+    }
+    if (bio.length) {
+      let s = `Pemantauan keanekaragaman hayati mencatat ${listText(bio.map((x) => `${x.items.length} catatan ${lowerVocab(x.label)} (${x.species.length} jenis teridentifikasi${x.unidentified ? `, ${x.unidentified} catatan belum ada di daftar aplikasi` : ""})`))}.`;
+      if (sw) {
+        const jumpa = sw.items.filter((o) => /perjumpaan/.test(o.category)), jejak = sw.items.filter((o) => !/perjumpaan/.test(o.category));
+        const dasar = [jumpa.length ? `perjumpaan langsung (${jumpa.length} catatan)` : "", ...tally(jejak, "tipetemuan").map((x) => `${lowerVocab(x.v)} (${x.n} catatan)`)].filter(Boolean);
+        if (dasar.length) s += ` Identifikasi jenis satwa didasarkan pada ${listText(dasar)}.`;
+        const ind = sumByUnit(jumpa);
+        if (ind.length) s += ` Jumlah satwa yang dijumpai langsung sebanyak ${listText(ind)}.`;
+        const lindung = [...new Set(sw.items.filter((o) => attrIs(o, "status", /^dilindungi$/i)).map((o) => o.species).filter(Boolean))];
+        if (lindung.length) s += ` Jenis dilindungi yang tercatat adalah ${listText(lindung.map(spName))}.`;
+      }
+      const kunci = Wl && Wl.data.kawasan ? ((Wl.data.kawasan.satwa_kunci || {}).jenis || []) : [];
+      if (kunci.length) {
+        const hit = kunci.map((j) => ({ j, n: M.observations.filter((o) => o.species && (o.species.toLowerCase().includes(j.ilmiah.toLowerCase()) || o.species.toLowerCase().startsWith(j.nama.toLowerCase()))).length }));
+        const ada = hit.filter((h) => h.n), tidak = hit.filter((h) => !h.n);
+        if (ada.length) s += ` Satwa kunci kawasan yang tercatat adalah ${listText(ada.map((h) => `${h.j.nama} (${h.j.ilmiah}) sebanyak ${h.n} catatan`))}.`;
+        if (tidak.length) s += ` Satwa kunci ${listText(tidak.map((h) => `${h.j.nama} (${h.j.ilmiah})`))} tidak tercatat selama patroli.`;
+      }
+      if (gp.length) s += ` Temuan tersebut berada pada habitat dengan ${gp[0]}.`;
+      pem.push(s);
+    }
+    if (gc) pem.push(`Ground check dilakukan pada ${gc.coords} titik koordinat untuk memperoleh data tutupan lahan aktual. Klasifikasi didasarkan pada pengamatan visual struktur vegetasi di lapangan sesuai pilihan klasifikasi pada Data Model SMART Balai${gp.length ? `, dengan hasil ${gp.join(" serta ")}` : ""}.`);
+    if (ft) {
+      const kon = tally(ft.items, "kondisi"), perlu = ft.items.filter((o) => o.followUp), pal = tally(ft.items, "nopal");
+      let s = `Pengamatan fitur (${ft.items.length} catatan) meliputi ${ragam(ft.items, ft.label)}${pal.length ? `, termasuk pal batas nomor ${listText(pal.map((x) => x.v))}` : ""}.`;
+      if (kon.length) s += ` Kondisi yang tercatat: ${tallyText(kon)}.`;
+      s += perlu.length ? ` Sebanyak ${perlu.length} catatan memerlukan tindak lanjut, yaitu ${listText([...new Set(perlu.map((o) => lowerVocab((attrOf(o, "tipetemuan") || {}).text || o.catLabel)))])}.` : " Seluruh fitur yang diamati tidak memerlukan tindak lanjut.";
+      pem.push(s);
+    }
+    // Pembahasan khusus judul
+    const mas = M.members.filter((m) => MASYARAKAT.includes(m.unsur)), apa = M.members.filter((m) => APARAT.includes(m.unsur));
+    const sos = M.observations.filter((o) => /sosialisasi/.test(o.category));
+    const kam = kameraRows(f);
+    const BAHAS = {
+      mitra: () => (mas.length ? `Unsur masyarakat dalam tim (${unsurCount(mas)}) ${(f.mitraPeran || []).length ? `berperan ${listText(f.mitraPeran)}` : "membantu tim berdasarkan pengetahuan lokal mengenai jalur dan kondisi lapangan"}. Patroli bersama ini sekaligus menjadi sarana pembinaan mitra dalam perlindungan kawasan.` : ""),
+      aparat: () => (apa.length ? `Keterlibatan ${unsurCount(apa)} memperkuat kehadiran aparat di lapangan dan efek pencegahan gangguan kawasan${(f.aparatPeran || []).length ? `, dengan peran ${listText(f.aparatPeran)}` : ""}.` : ""),
+      tipihut: () => (f.tipihut ? `Selama kegiatan, dugaan tindak pidana kehutanan ${f.tipihut}.` : ""),
+      sosialisasi: () => {
+        const part = sos.reduce((s, o) => s + (Number(((attrOf(o, "jumlahpartisipan") || {}).raw || [])[0]?.value) || 0), 0);
+        let s = f.sosJumlah || (f.sosDesa || []).length || (f.sosMateri || []).length
+          ? `Imbauan pencegahan kebakaran disampaikan kepada ${Number(f.sosJumlah) > 0 ? `${nTxt(Number(f.sosJumlah))} orang ` : ""}masyarakat${(f.sosDesa || []).length ? ` dari Desa ${listText(f.sosDesa)}` : ""}${(f.sosMateri || []).length ? `, dengan materi ${listText(f.sosMateri)}` : ""}.`
+          : "Imbauan larangan membakar disampaikan secara langsung kepada masyarakat yang dijumpai di dalam dan sekitar kawasan.";
+        if (sos.length) s += ` Kegiatan sosialisasi tercatat di SMART pada ${sos.length} titik${part ? ` dengan jumlah partisipan ${part} orang` : ""}.`;
+        return s;
+      },
+      hotspot: () => (f.hotspot ? `Pemeriksaan titik panas (hotspot): ${f.hotspot}${Number(f.hotspotN) > 0 ? `; jumlah titik panas yang diperiksa ${nTxt(Number(f.hotspotN))} titik` : ""}.` : ""),
+      rawan: () => {
+        if ((f.rawanFaktor || []).length) return `Faktor kerawanan kebakaran yang diamati di lokasi meliputi ${listText(f.rawanFaktor)}.`;
+        const savana = gc && gc.items.some((o) => /savana|padang rumput/i.test(o.attrs.map((a) => a.text).join(" ")));
+        return savana && musim(I.mulai) === "musim kemarau" ? "Tutupan savana pada musim kemarau merupakan bahan bakar yang mudah terbakar, sehingga lokasi patroli termasuk rawan kebakaran." : "";
+      },
+      potensi: () => {
+        // Potensi: satwa, tumbuhan, dan fitur sumber air/wisata (spesies invasif dan sarana prasarana bukan potensi)
+        const air = ft ? ft.items.filter((o) => /air|wisata|geologi/i.test(o.catLabel + " " + ((attrOf(o, "tipetemuan") || {}).text || ""))) : [];
+        const parts = [...bio.filter((x) => x.top !== "spesiesinvasif" && x.species.length).map((x) => `${x.species.length} jenis ${lowerVocab(x.label)}`), air.length ? `${air.length} titik sumber air dan potensi wisata` : ""].filter(Boolean);
+        const pot = W ? [...new Set(W.resors.flatMap((r) => r.potensi || []))].slice(0, 3).map(lowerVocab) : [];
+        return parts.length ? `Potensi kawasan yang terdata selama kegiatan meliputi ${listText(parts)}.${pot.length && kajian ? ` Data ini melengkapi potensi wilayah kerja ${W.nama} menurut ${kajian}, antara lain ${listText(pot)}.` : ""}` : "";
+      },
+      kamera: () => {
+        if (!kam.length) return "";
+        const pasang = kam.filter((r) => r.pasang && !r.unduh), unduh = kam.filter((r) => r.unduh);
+        let s = `Kegiatan kamera jebak meliputi ${[pasang.length ? `pemasangan ${nTxt(pasang.length)} unit kamera (${listText(pasang.map((r) => r.kode.trim()))})` : "", unduh.length ? `pengunduhan data ${nTxt(unduh.length)} unit kamera (${listText(unduh.map((r) => r.kode.trim()))})` : ""].filter(Boolean).join(" dan ") || `${nTxt(kam.length)} unit kamera`}.`;
+        const hari = unduh.reduce((a, r) => a + (hariAktif(r) || 0), 0), foto = unduh.reduce((a, r) => a + (numVal(r.foto) || 0), 0);
+        if (unduh.length && (hari || foto)) s += ` Kamera yang diunduh ${hari ? `aktif selama total ${hari} hari kamera (trap-days)` : ""}${hari && foto ? " dengan " : foto ? "merekam " : ""}${foto ? `${foto} foto/video` : ""}.`;
+        const satwa = [...new Set(kam.flatMap((r) => String(r.satwa || "").split(/[;,]/).map((x) => x.trim()).filter(Boolean)))];
+        if (satwa.length) s += ` Jenis satwa yang terekam meliputi ${listText(satwa)}.`;
+        const kon = tally(kam.map((r) => ({ attrs: [{ key: "k", vals: r.kondisi ? [r.kondisi] : [] }] })), "k");
+        if (kon.length) s += ` Kondisi kamera: ${tallyText(kon, "unit")}.`;
+        if (f.kameraManusia) s += ` Rekaman aktivitas manusia pada kamera jebak: ${f.kameraManusia}.`;
+        return s;
+      }
+    };
+    for (const b of (K && K.bahas) || []) { const s = BAHAS[b] && BAHAS[b](); if (s) pem.push(s); }
+    if (!(K && K.bahas || []).includes("tipihut") && f.tipihut) pem.push(BAHAS.tipihut());
+    // Keterbatasan pengamatan
+    const lim = [...(f.cuaca && /hujan|kabut|angin/.test(f.cuaca) ? [`cuaca ${f.cuaca}`] : []), ...kendala];
+    if (t.days < I.hari) lim.push(`perekaman data SMART yang hanya dilakukan pada ${nTxt(t.days)} dari ${nTxt(I.hari)} hari pelaksanaan`);
+    pem.push(`Lintasan yang terekam sepanjang ${modeTxt}.${lim.length ? ` Keterbatasan pengamatan selama kegiatan meliputi ${listText(lim)}, sehingga data yang dilaporkan terbatas pada jalur dan waktu perekaman tersebut.` : (f.kendala || []).includes(NONE_KENDALA) ? " Tidak terdapat kendala berarti selama pengamatan; data yang dilaporkan terbatas pada jalur dan waktu perekaman tersebut." : " Data yang dilaporkan terbatas pada jalur dan waktu perekaman tersebut."}`);
+    if (M.duplicates.length) {
+      const near = M.duplicates.filter((a) => { const ms = a.map((o) => minutes(o.wp.time)); return Math.max(...ms) - Math.min(...ms) <= 1; }).length, far = M.duplicates.length - near;
+      pem.push(`Terdapat ${M.duplicates.length} kelompok catatan dengan kategori, jenis, tanggal, dan koordinat yang sama (ditandai * pada Lampiran 2).${near ? ` Sebanyak ${near} kelompok dengan selisih waktu pencatatan paling lama 1 menit kemungkinan merupakan pencatatan ganda.` : ""}${far ? ` Sebanyak ${far} kelompok dengan selisih waktu lebih lama kemungkinan merupakan pengamatan berbeda pada titik yang sama.` : ""} Catatan tersebut tidak dihapus dan tetap dihitung dalam tabel.`);
+    }
+
+    /* Simpulan: menjawab tujuan kegiatan */
+    if (amx.length) kes.push(`Masih terdapat ${amx.length} catatan aktivitas manusia di dalam kawasan pada ${new Set(amx.map((o) => `${o.wp.x.toFixed(5)},${o.wp.y.toFixed(5)}`)).size} titik koordinat, berupa ${listText(subsOf(amx).map((x) => lowerVocab(x.v)))}.`);
+    else kes.push("Tidak tercatat aktivitas manusia yang mengganggu kawasan selama patroli.");
+    if (fires.length) kes.push(`Tercatat ${fires.length} catatan indikasi kebakaran berupa ${listText(tally(fires, "tipetemuan").map((x) => lowerVocab(x.v))) || "kebakaran hutan dan lahan"}${f.apiKondisi ? `; kondisi terakhir api ${f.apiKondisi}` : ""}.`);
+    else if (I.fire) kes.push("Tidak ditemukan indikasi kebakaran hutan dan lahan selama patroli.");
+    if (bio.length) {
+      const lindung = sw ? [...new Set(sw.items.filter((o) => attrIs(o, "status", /^dilindungi$/i)).map((o) => o.species))] : [];
+      kes.push(`Keanekaragaman hayati yang tercatat meliputi ${listText(bio.map((x) => `${x.species.length} jenis ${lowerVocab(x.label)}`))} yang teridentifikasi${lindung.length ? `, termasuk ${lindung.length} jenis dilindungi` : ""}.`);
+    }
+    if (gp.length) kes.push(`Hasil ground check menunjukkan ${gp.join(" dan ")}.`);
+    if (ft) {
+      const kon = tally(ft.items, "kondisi"), perlu = ft.items.filter((o) => o.followUp).length;
+      kes.push(`Sarana prasarana dan fitur yang diamati (${ft.items.length} catatan)${kon.length ? ` umumnya dalam kondisi ${lowerVocab(kon[0].v)}` : " telah terdata"}${perlu ? `, dengan ${perlu} catatan memerlukan tindak lanjut` : ""}.`);
+    }
+    if (kam.length) kes.push(`Sebanyak ${nTxt(kam.length)} unit kamera jebak telah ${kam.some((r) => r.unduh) ? (kam.some((r) => !r.unduh) ? "dipasang dan diunduh datanya" : "diunduh datanya") : "dipasang"}.`);
+    if (C.cegah && Number(f.sosJumlah) > 0) kes.push(`Imbauan pencegahan kebakaran telah disampaikan kepada ${nTxt(Number(f.sosJumlah))} orang masyarakat.`);
+
+    /* Saran */
+    const kapan = f.tindakLanjut || "pada patroli rutin berikutnya";
+    if (amGrids.length) sar.push(`Menetapkan Grid ${listText(amGrids)} sebagai lokasi prioritas patroli lanjutan oleh ${pelaksana} ${kapan}.`);
+    if (fires.length) sar.push(C.apiAktif ? "Melakukan pemeriksaan ulang lokasi kebakaran dalam waktu 1 × 24 jam untuk memastikan api benar-benar padam, serta pendalaman sumber api bersama Manggala Agni dan MPA setempat."
+      : "Memantau lokasi bekas kebakaran dan mendalami dugaan sumber api bersama MPA dan masyarakat setempat.");
+    if (amx.length) sar.push(`Menindaklanjuti catatan aktivitas manusia melalui verifikasi lapangan, imbauan, dan edukasi kepada masyarakat${ad && ad.desa ? ` ${ad.desa}` : ""} sesuai prosedur.`);
     const inv = g("spesiesinvasif");
-    if (inv) sar.push(`Melakukan pemantauan dan pengendalian spesies invasif (${inv.species.slice(0, 3).map((s) => s.name).join(", ")}) di lokasi temuan.`);
+    if (inv) sar.push(`Melakukan pemantauan dan pengendalian spesies invasif${inv.species.length ? `, yaitu ${listText(inv.species.slice(0, 3).map((x) => spName(x.name)))},` : ""} di lokasi temuan.`);
     const unid = M.groups.reduce((s, x) => s + x.unidentified, 0);
-    if (unid) sar.push(`Melakukan identifikasi lanjutan terhadap ${unid} catatan jenis yang belum ada di daftar aplikasi dan mengusulkan penambahan ke Data Model SMART.`);
+    if (unid) sar.push(`Melakukan identifikasi lanjutan terhadap ${unid} catatan jenis yang belum ada di daftar aplikasi dan mengusulkan penambahannya ke Data Model SMART.`);
+    if (ft && ft.items.some((o) => o.followUp)) sar.push(`Memperbaiki atau mengganti fitur yang memerlukan tindak lanjut ${kapan}.`);
     if (K) sar.push(...(K.saran || []).map(kt));
+    if (C.kamera) sar.push(f.kameraJadwal ? `Melakukan pengecekan dan pengunduhan data kamera jebak berikutnya pada tanggal ${tglPanjang(f.kameraJadwal)}.` : "Melakukan pengecekan dan pengunduhan data kamera jebak secara berkala sesuai kapasitas baterai dan kartu memori.");
     sar.push("Melanjutkan patroli rutin pada jalur dan grid yang sama untuk pemantauan berkala.");
+
     notes.pembahasan = pem.map((x, i) => `${i + 1}. ${x}`).join("\n");
     notes.kesimpulan = [`Berdasarkan kegiatan ${I.judulLengkap}, dapat disimpulkan sebagai berikut:`, ...kes.map((x, i) => `${i + 1}. ${x}`)].join("\n");
     notes.saran = ["Rekomendasi tindak lanjut berdasarkan hasil kegiatan adalah sebagai berikut:", ...sar.map((x, i) => `${i + 1}. ${x}`)].join("\n");
+    const dukung = [...new Set(M.members.map((m) => m.unsur).filter((u) => u && u !== "balai"))].map((u) => UNSUR_SHORT[u] || u);
+    notes.penutup = [
+      `Demikian laporan pelaksanaan kegiatan ${I.judulLengkap} ini disusun sebagai pertanggungjawaban pelaksanaan Surat Tugas Nomor ${I.nomorST || "……………"}. Kami berharap laporan ini dapat menjadi bahan pertimbangan pimpinan dalam pengambilan kebijakan pengelolaan kawasan Taman Nasional Tambora, dan mohon arahan pimpinan untuk tindak lanjut hasil kegiatan.`,
+      `Kami menyampaikan terima kasih kepada ${dukung.length ? `${listText(dukung)} yang telah mendukung pelaksanaan kegiatan ini, serta kepada ` : ""}seluruh pihak yang telah membantu kelancaran kegiatan.`
+    ].join("\n");
     // Singkatan dijelaskan pada penggunaan pertama
     let hhbk = false;
     for (const k of ["latar", "maksud", "ruanglingkup", "lokasi", "hasil", ...M.groups.map((x) => "hasil_" + x.top), "pembahasan", "kesimpulan", "saran"]) {
@@ -775,12 +1203,17 @@
     const noUnsur = M.members.filter((m) => !m.unsurOk);
     const alatKosong = I.alat.filter((x) => (x.nama || "").trim() && !String(x.jumlah || "").trim());
     const sumGroups = M.groups.reduce((s, x) => s + x.items.length, 0), sumDays = M.days.reduce((s, d) => s + d.nObs, 0);
+    const C = faktaCtx(M, I), f = I.facts || {}, shown = faktaShown(C);
+    const wajib = shown.filter((x) => x.req && x.req(C)), pilihan = shown.filter((x) => !(x.req && x.req(C)));
+    const terisi = pilihan.filter((x) => filled(x, f[x.k]));
+    const d = M.wilayahAuto;
     return [
       { label: "File ekspor patroli SMART", ok: true, note: `${M.totals.obs} catatan pada ${M.totals.coords} titik koordinat unik, ${M.totals.photos} foto` },
       { label: "Jumlah catatan harian = jumlah tabel kategori", ok: sumGroups === sumDays, note: `${sumDays} catatan harian, ${sumGroups} di tabel kategori` },
       { label: "Data Model SMART (nama kategori dan jenis)", ok: M.unknown.size === 0, note: M.unknown.size ? `${M.unknown.size} kode belum punya nama` : "semua kode punya nama" },
       { label: "Kemungkinan pencatatan ganda", ok: !M.duplicates.length, note: M.duplicates.length ? M.duplicates.map((a) => `${a[0].species || a[0].catLabel} ${a[0].wp.date} (WP ${a.map((o) => o.wp.id + " " + o.wp.time.substr(0, 5)).join(", ")})`).slice(0, 3).join("; ") + " — periksa, jangan langsung dihapus" : "" },
       { label: "Judul kegiatan (mandat patroli)", ok: !!(info.judul || M.patrol.mandate), note: `"${I.judul}"${I.keg ? (I.keg.judul === I.judul ? "" : `; narasi mengikuti judul baku "${I.keg.judul}"`) : "; tidak cocok dengan judul baku, narasi umum dipakai"}` },
+      { label: "Wilayah kerja (SPTN/resor)", ok: !!I.W, note: I.W ? `${I.W.nama}${I.wilayahAuto ? ` (otomatis${d ? `, ${Math.round(d.counts[0].share * 100)}% titik di Resor ${d.counts[0].resor.nama}` : ""}; ubah di Data kegiatan bila perlu)` : ""}` : "pilih wilayah kerja di Data kegiatan" },
       { label: "Nomor dan tanggal Surat Tugas", ok: !!(I.nomorST && I.tanggalST), note: I.nomorST || "ID patroli bukan nomor ST, isi manual" },
       { label: "Scan Surat Tugas untuk lampiran", ok: (scans || []).length > 0, note: (scans || []).length ? `${scans.length} halaman` : "" },
       { label: `DIPA TA.${I.year}`, ok: !!(I.nomorDipa && I.tanggalDipa), note: I.nomorDipa ? I.nomorDipa : "belum ada di data/dipa.json" },
@@ -790,10 +1223,12 @@
       { label: "Unsur anggota (Balai/Polri/TNI/masyarakat)", ok: !noUnsur.length, note: noUnsur.length ? `pilih unsur: ${noUnsur.map((m) => m.smartName).join(", ")}` : "" },
       kegTeamCheck(I.keg, M.members),
       { label: "Jumlah alat dan bahan yang digunakan", ok: !alatKosong.length, note: alatKosong.length ? `${alatKosong.length} baris belum diisi jumlahnya` : "" },
+      ...wajib.map((x) => ({ label: `Isian lapangan: ${x.label}`, ok: filled(x, f[x.k]), note: filled(x, f[x.k]) ? "" : "wajib diisi" })),
+      pilihan.length ? { label: "Isian lapangan (pilihan)", ok: terisi.length === pilihan.length, opt: true, note: `${terisi.length} dari ${pilihan.length} terisi; isian kosong tidak ditulis di narasi` } : null,
       { label: "Kepala Balai dan Kasubbag TU (nama, NIP)", ok: !!(profile.kepalaBalaiNama && profile.kepalaBalaiNip && profile.kasubbagNama && profile.kasubbagNip) },
       { label: "Lapisan grid dan zonasi", ok: (M.hasLayers.grid && M.hasLayers.zonasi) || !!info.grids, note: M.hasLayers.grid ? `grid: ${M.grids.join(", ") || "-"}${M.zonas.length ? "; " + M.zonas.join(", ") : ""}` : info.grids ? "diisi manual" : "" },
       { label: "Tempat dan tanggal penandatanganan", ok: !!info.tanggalLaporan, note: `${I.kota || "…"}, ${info.tanggalLaporan ? tglPanjang(I.tanggalLaporan) : "sementara " + tglPanjang(I.tanggalLaporan)}` },
-      { label: "Isian bertanda [ … ] di narasi sudah dilengkapi", ok: !hasPH(notes), note: hasPH(notes) ? "cari teks berlatar kuning bertanda kurung siku" : "" },
+      hasPH(notes) ? { label: "Isian bertanda [ … ] di narasi", ok: false, note: "narasi lama yang tersimpan masih memuat isian; klik Atur ulang narasi atau lengkapi teks berlatar kuning" } : null,
       { label: "Narasi sudah diperiksa", ok: !!info.narasiOk, note: "centang setelah teks diperiksa" }
     ].filter(Boolean);
   }
@@ -801,14 +1236,17 @@
   /* ---------- HTML ---------- */
   const xy = (v) => (isFinite(v) ? v.toFixed(6) : "");
 
-  // Isian [ … ] disorot supaya mudah ditemukan; teks tetap bisa diedit langsung
-  function noteBlock(notes, key, cls = "para") {
-    return `<div class="note ${cls}" contenteditable="true" data-note="${key}">${esc(notes[key] || "").replace(/\[([^\]]+)\]/g, '<mark class="ph">[$1]</mark>').replace(/(\s-\s)([A-Z][a-z]+ [a-z]{3,}(?: [a-z]{3,})?)(?=[\s,.;)]|$)/gm, "$1<i>$2</i>").replace(/\n/g, "<br>")}</div>`;
+  // Narasi bisa diedit langsung; nama ilmiah dicetak miring; isian [ … ] lama disorot.
+  // Tiap baris satu blok: "1. …" dan "a. …" menggantung seperti butir bernomor di Word, baris lain paragraf menjorok 1 cm.
+  function noteBlock(notes, key, lv = 2) {
+    const text = String(notes[key] || "");
+    const html = text ? text.split("\n").map((l) => {
+      const t = l.trim(), cls = /^\d+[.)]\s/.test(t) ? "num" : /^[a-z][.)]\s/.test(t) ? "let" : "par";
+      return `<div class="ln ${cls}">${t ? italicLatin(esc(l).replace(/\[([^\]]+)\]/g, '<mark class="ph">[$1]</mark>')) : "<br>"}</div>`;
+    }).join("") : "";
+    return `<div class="note para lv${lv}" contenteditable="true" data-note="${key}">${html}</div>`;
   }
-
-  function sign(lines, name, nip) {
-    return `<div class="sg">${lines.map((l) => `<div>${esc(l)}</div>`).join("")}<div class="space"></div><div class="nm">${esc(name || "……………………………")}</div><div>NIP. ${esc(fmtNip(nip) || "……………………")}</div></div>`;
-  }
+  const olList = (arr, lv = 2) => `<ol class="list lv${lv}">${arr.map((x) => `<li>${italicLatin(esc(x))}</li>`).join("")}</ol>`;
 
   function columnsFor(gr, M) {
     const multi = gr.subs.length > 1 || gr.subs[0].label !== gr.label;
@@ -817,11 +1255,12 @@
     const rank = (k) => (/^jenis(satwa|tumbuhan|biota)/.test(k) ? 0 : k === "tipetemuan" ? 1 : k === "jumlah" ? 2 : k === "satuan" ? 3 : /^keterangan/.test(k) ? 9 : 5);
     keys.sort((a, b) => rank(a) - rank(b));
     const PREF = {
-      aktivitasmanusia: ["tipetemuan", "jumlah", "satuan", "keterangan"],
-      satwaliar: ["jenissatwa", "jumlah", "satuan", "tipetemuan"],
-      tumbuhan: ["jenistumbuhan", "tipetemuan"],
+      aktivitasmanusia: ["tipetemuan", "jumlah", "satuan", "tindakan", "keterangan"],
+      satwaliar: ["jenissatwa", "jumlah", "satuan", "tipetemuan", "status"],
+      tumbuhan: ["jenistumbuhan", "tipetemuan", "kondisitumbuhan"],
       spesiesinvasif: ["jenistumbuhan", "jumlah", "satuan"],
-      fitur: ["tipetemuan", "kondisi", "nopal", "perlutindaklanjut"]
+      fitur: ["tipetemuan", "kondisi", "nopal", "perlutindaklanjut"],
+      groundcheck: ["klasifikasi4", "klasifikasi3", "klasifikasi02"]
     };
     if (PREF[gr.top]) { const pk = PREF[gr.top].filter((k) => keys.includes(k)); if (pk.length) keys.splice(0, keys.length, ...pk); }
     else if (keys.length > 6) keys.splice(6);
@@ -832,103 +1271,159 @@
   function photoFig(p, url, caption) {
     return `<figure>${url ? `<img src="${url}" alt="">` : `<div class="nophoto">${esc(p.file)}</div>`}<figcaption>${caption}</figcaption></figure>`;
   }
+  const coordKeyOf = (o) => `${o.wp.x.toFixed(5)},${o.wp.y.toFixed(5)}`;
+  // Ringkasan per kategori di bagian Hasil; rincian per catatan dipindah ke Lampiran 2
+  function rekapTable(gr, M) {
+    const grid = M.hasLayers.grid || M.observations.some((o) => o.wp.grid);
+    const gridCell = (items) => (grid ? `<td class="c">${esc(uniqGrids(items).join(", ") || "-")}</td>` : "");
+    if (BIODIV.includes(gr.top)) {
+      const hasStatus = gr.items.some((o) => attrOf(o, "status"));
+      const rows = gr.species.map((s) => ({ name: sci(s.name), n: s.records, jml: s.total ? `${fmtNum(s.total)} ${s.unit || ""}`.trim() : "-",
+        st: [...new Set(s.items.map((o) => (attrOf(o, "status") || {}).text).filter(Boolean))].join(", ") || "-", items: s.items }));
+      const unid = gr.items.filter((o) => o.unidentified), noSp = gr.items.filter((o) => !o.species);
+      if (unid.length) rows.push({ name: "Belum ada di daftar aplikasi", n: unid.length, jml: sumByUnit(unid).join(", ") || "-", st: "-", items: unid });
+      if (noSp.length) rows.push({ name: "Tanpa nama jenis", n: noSp.length, jml: sumByUnit(noSp).join(", ") || "-", st: "-", items: noSp });
+      return `<table class="data rekap"><thead><tr><th>No</th><th>Jenis</th><th>Jumlah Catatan</th><th>Jumlah Individu/ Objek</th>${hasStatus ? "<th>Status</th>" : ""}${grid ? "<th>Grid</th>" : ""}</tr></thead><tbody>${rows.map((r, i) => `<tr><td class="c">${i + 1}</td><td>${r.name}</td><td class="c">${r.n}</td><td class="c">${esc(r.jml)}</td>${hasStatus ? `<td class="c">${esc(r.st)}</td>` : ""}${gridCell(r.items)}</tr>`).join("")}<tr class="total"><td></td><td>Jumlah</td><td class="c">${gr.items.length}</td><td></td>${hasStatus ? "<td></td>" : ""}${grid ? "<td></td>" : ""}</tr></tbody></table>`;
+    }
+    const kindOf = (o) => (gr.top === "groundcheck" ? (attrOf(o, "klasifikasi4") || attrOf(o, "klasifikasi02") || attrOf(o, "klasifikasi01") || {}).text : (attrOf(o, "tipetemuan") || {}).text) || "";
+    const map = new Map();
+    gr.items.forEach((o) => { const k = o.catLabel + "|" + kindOf(o); if (!map.has(k)) map.set(k, { sub: o.catLabel, kind: kindOf(o), items: [] }); map.get(k).items.push(o); });
+    const multi = gr.subs.length > 1 || gr.subs[0].label !== gr.label, hasCount = gr.items.some((o) => o.count != null);
+    const rows = [...map.values()];
+    return `<table class="data rekap"><thead><tr><th>No</th><th>Jenis Temuan</th><th>Jumlah Catatan</th><th>Titik Koordinat</th>${hasCount ? "<th>Jumlah Objek</th>" : ""}${grid ? "<th>Grid</th>" : ""}</tr></thead><tbody>${rows.map((r, i) => `<tr><td class="c">${i + 1}</td><td>${esc(multi ? `${r.sub}${r.kind ? " – " + r.kind : ""}` : r.kind || r.sub)}</td><td class="c">${r.items.length}</td><td class="c">${new Set(r.items.map(coordKeyOf)).size}</td>${hasCount ? `<td class="c">${esc(sumByUnit(r.items).join(", ") || "-")}</td>` : ""}${gridCell(r.items)}</tr>`).join("")}<tr class="total"><td></td><td>Jumlah</td><td class="c">${gr.items.length}</td><td class="c">${gr.coords}</td>${hasCount ? "<td></td>" : ""}${grid ? "<td></td>" : ""}</tr></tbody></table>`;
+  }
+  // Matriks data per catatan (Lampiran 2)
+  function detailTable(gr, M) {
+    const C = columnsFor(gr, M);
+    return `<table class="data detail"><thead><tr><th>No</th><th>Tanggal/ Jam</th><th>Koordinat X/ Y</th>${C.multi ? "<th>Jenis Temuan</th>" : ""}${C.grid ? "<th>Grid</th>" : ""}${C.zona ? "<th>Zona</th>" : ""}${C.heads.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>
+      ${gr.items.map((o, i) => `<tr${o.dup ? ' class="dup"' : ""}><td class="c">${i + 1}${o.dup ? "*" : ""}</td><td class="nw">${esc(nb(tglPanjang(o.wp.date)))}<br>${esc(jam((o.wp.time || "").substr(0, 5)))}</td><td class="nw">${xy(o.wp.x)}<br>${xy(o.wp.y)}</td>${C.multi ? `<td>${esc(o.catLabel)}</td>` : ""}${C.grid ? `<td class="c">${esc(o.wp.grid || "-")}</td>` : ""}${C.zona ? `<td>${esc(o.wp.zona || "-")}</td>` : ""}${C.keys.map((k) => { const a = o.attrs.find((x) => x.key === k); return `<td>${a ? (/^jenis(satwa|tumbuhan|biota)/.test(k) ? sci(a.text) : esc(a.text)) : "-"}</td>`; }).join("")}</tr>`).join("")}</tbody></table>`;
+  }
+  // Matriks analisis (Lampiran 3): jumlah catatan per grid (atau per hari bila tanpa grid) dan kategori
+  function matrixTable(M) {
+    const byGrid = M.observations.some((o) => o.wp.grid);
+    const keyOf = (o) => (byGrid ? o.wp.grid || "Di luar grid" : String(o.day.no));
+    const keys = byGrid ? [...new Set(M.observations.map(keyOf))].sort((a, b) => (a === "Di luar grid") - (b === "Di luar grid") || (parseFloat(a) || 0) - (parseFloat(b) || 0) || a.localeCompare(b)) : M.days.map((d) => String(d.no));
+    const head = byGrid ? "<th>Grid</th>" : "<th>Hari/ Tanggal</th>";
+    const label = (k) => (byGrid ? esc(k) : esc(nb(tglPanjang(M.days[Number(k) - 1].date))));
+    const rows = keys.map((k, i) => {
+      const its = M.observations.filter((o) => keyOf(o) === k);
+      return `<tr><td class="c">${i + 1}</td><td class="${byGrid ? "c" : "nw"}">${label(k)}</td>${M.groups.map((g) => { const n = its.filter((o) => o.top === g.top).length; return `<td class="c">${n || "-"}</td>`; }).join("")}<td class="c"><b>${its.length}</b></td></tr>`;
+    });
+    return { byGrid, html: `<table class="data matrix"><thead><tr><th>No</th>${head}${M.groups.map((g) => `<th>${esc(g.label)}</th>`).join("")}<th>Jumlah</th></tr></thead><tbody>${rows.join("")}<tr class="total"><td></td><td>Jumlah</td>${M.groups.map((g) => `<td class="c">${g.items.length}</td>`).join("")}<td class="c">${M.totals.obs}</td></tr></tbody></table>` };
+  }
+  function kameraTable(rows) {
+    return `<table class="data kamera"><thead><tr><th>No</th><th>Kode Kamera</th><th>Tanggal Pasang</th><th>Tanggal Unduh</th><th>Hari Aktif</th><th>Foto/ Video</th><th>Satwa Terekam</th><th>Kondisi</th></tr></thead><tbody>${rows.map((r, i) => `<tr><td class="c">${i + 1}</td><td class="c">${esc(r.kode)}</td><td class="nw">${esc(r.pasang ? nb(tglPanjang(r.pasang)) : "-")}</td><td class="nw">${esc(r.unduh ? nb(tglPanjang(r.unduh)) : "-")}</td><td class="c">${hariAktif(r) ?? "-"}</td><td class="c">${esc(r.foto || "-")}</td><td>${esc(r.satwa || "-")}</td><td class="c">${esc(r.kondisi || "-")}</td></tr>`).join("")}</tbody></table>`;
+  }
+  // Daftar lampiran setelah blok penutup (Memorandum, Lampiran 4)
+  const lampiranIndex = (items) => `<div class="lamp-idx"><p class="lamp-head">LAMPIRAN</p><ul class="arrow">${items.map((x, i) => `<li>${esc(x)}${i === items.length - 1 ? "." : ";"}</li>`).join("")}</ul></div>`;
+  const dupNote = "* Kategori, jenis, tanggal, dan koordinat sama dengan catatan lain; perlu diperiksa apakah pengamatan berbeda atau pencatatan ganda.";
+  const unidNote = '"Belum ada di daftar aplikasi": jenis belum tersedia dalam daftar jenis aplikasi SMART dan tidak dihitung sebagai jenis tersendiri.';
 
   function renderHTML(M, profile, info, notes, maps, photoUrls, scans) {
-    const I = deriveInfo(M, info, profile), t = M.totals;
-    const balai = profile.balai || "Balai Taman Nasional Tambora";
-    const pengesahanTgl = tglPanjang(I.tanggalLaporan);
-    const h2 = (txt, pb) => `<h2 class="sec${pb ? " pb" : ""}">${esc(txt)}</h2>`, h3 = (txt) => `<h3>${esc(txt)}</h3>`;
+    const I = deriveInfo(M, info, profile), t = M.totals, N = numbering(), C = faktaCtx(M, I);
+    const balai = profile.balai || "Balai Taman Nasional Tambora", tglTtd = tglPanjang(I.tanggalLaporan), periodeTxt = periodeSd(I.mulai, I.selesai);
+    const ketua = I.ketua || {}, penyusun = I.penyusun || {};
+    const letter = (i) => String.fromCharCode(97 + i);
 
-    /* Halaman awal: kop, LAPORAN / TENTANG / judul, identitas dan pengesahan */
-    const kv = [
-      ["Judul Kegiatan", I.judulLengkap], ["Nomor Surat Tugas", `${I.nomorST || "……………"}${I.tanggalST ? ` tanggal ${tglPanjang(I.tanggalST)}` : ""}`],
-      ["Waktu Kegiatan", periodeSd(I.mulai, I.selesai)], ["Lokasi Kegiatan", `${I.lokasi}${I.gridText ? `, ${I.gridText}` : ""}`],
-      ["Pelaksana", `Tim ${teamShort(M.members)}`], ["Jumlah Anggaran", I.anggaran || "Rp……………"],
-      ["Sumber Anggaran", I.sumberAnggaran], ["Disusun di", I.kota || "……………"], ["Pada Tanggal", pengesahanTgl]
-    ];
-    const front = [kopHtml(balai), titleHtml("LAPORAN", `Pelaksanaan Kegiatan ${I.judulLengkap}${/tambora/i.test(I.judulLengkap) ? "" : " " + balai.replace(/^Balai\s+/i, "")}`),
-      `<table class="kv-plain">${kv.map(([k, v]) => `<tr><td>${esc(k)}</td><td>:</td><td>${esc(v)}</td></tr>`).join("")}</table>
-      <table class="sign"><tr><td>${sign(["Menyetujui,", profile.kasubbagJabatan || "Kepala Subbagian Tata Usaha,"], profile.kasubbagNama, profile.kasubbagNip)}</td>
-      <td>${sign(["", "Ketua Tim Pelaksana,"], I.penyusun ? I.penyusun.name : "", I.penyusun ? I.penyusun.nip : "")}</td></tr>
-      <tr><td colspan="2">${sign(["Mengetahui,", `Kepala ${balai},`], profile.kepalaBalaiNama, profile.kepalaBalaiNip)}</td></tr></table>`];
+    const body = [kopHtml(profile), titleHtml("LAPORAN", I.judulLengkap)];
+    /* 1. Pendahuluan */
+    body.push(N.h1("1. Pendahuluan"), N.h2("a. Umum"), noteBlock(notes, "latar"), N.h2("b. Maksud dan Tujuan"), noteBlock(notes, "maksud"), N.h2("c. Ruang Lingkup"), noteBlock(notes, "ruanglingkup"),
+      N.h2("d. Dasar"), para(`Dasar pelaksanaan kegiatan ${esc(I.judulLengkap)} adalah sebagai berikut:`), olList(dasarList(profile, I, M.members)));
 
-    const body = [];
-    /* A. Pendahuluan */
-    body.push(h2("A. PENDAHULUAN"), h3("1. Latar Belakang"), noteBlock(notes, "latar"), h3("2. Maksud dan Tujuan"), noteBlock(notes, "maksud"), h3("3. Ruang Lingkup"), noteBlock(notes, "ruanglingkup"),
-      h3("4. Dasar"), `<p class="para">Dasar pelaksanaan kegiatan ${esc(I.judulLengkap)} adalah sebagai berikut:</p>`,
-      `<ol class="list">${dasarList(profile, I, M.members).map((d) => `<li>${esc(d.replace(/^\d+[.)]\s*/, ""))}</li>`).join("")}</ol>`);
+    /* 2. Kegiatan yang dilaksanakan */
+    const dayTable = `<table class="data"><thead><tr><th>Hari</th><th>Tanggal</th><th>Sesi Perekaman SMART</th><th>Moda</th><th>Jarak (km)</th><th>Catatan Temuan</th></tr></thead><tbody>${M.days.map((d) => `<tr><td class="c">${d.no}</td><td class="nw">${esc(nb(tglPanjang(d.date, true)))}</td><td class="c">${jam(d.start)}–${jam(d.end)}</td><td class="c">${esc(d.drone ? "Drone" : d.transport || "-")}</td><td class="r">${num(d.km, 2)}</td><td class="r">${d.nObs}</td></tr>`).join("")}<tr class="total"><td></td><td colspan="3">Total</td><td class="r">${num(t.km, 2)}</td><td class="r">${t.obs}</td></tr></tbody></table>`;
+    const modesRow = M.modes.length > 1 ? para(`Rincian panjang lintasan menurut moda: ${esc(M.modes.map((m) => `${m.drone ? "penerbangan drone" : lowerVocab(m.mode)} ±${num(m.km, 2)} km`).join("; "))}. Total pada tabel merupakan penjumlahan angka harian yang telah dibulatkan.`) : "";
+    const sched = [[`Penyusunan Rencana Pelaksanaan Kegiatan ${I.judul}`, addDays(I.mulai, -I.rencanaHari), addDays(I.mulai, -1)], [`Pelaksanaan Kegiatan ${I.judul}`, I.mulai, I.selesai],
+      [`Pengolahan Data dan Penyusunan Laporan Kegiatan ${I.judul}`, addDays(I.selesai, 1), I.tanggalLaporan < I.selesai ? I.selesai : I.tanggalLaporan]].filter((r) => r[1] <= r[2]);
+    body.push(N.h1("2. Kegiatan yang dilaksanakan"),
+      N.h2("a. Keadaan Umum Lokasi Kegiatan"), noteBlock(notes, "lokasi"),
+      N.h2("b. Waktu Pelaksanaan"), noteBlock(notes, "waktu"), N.cap("Rekap Sesi Perekaman Data SMART"), dayTable, modesRow,
+      N.h2("c. Alat dan Bahan"), para("Alat dan bahan yang digunakan dalam kegiatan ini adalah sebagai berikut:"), N.cap("Alat dan Bahan"), alatTable(I.alat),
+      N.h2("d. Metode Pelaksanaan/Metode Pengumpulan Data"), noteBlock(notes, "metode"),
+      N.h2("e. Metode Analisis Data"), noteBlock(notes, "analisis"),
+      N.h2("f. Tim Pelaksana"), para(`${esc(teamSentence(M.members))} Susunan tim dan peran masing-masing anggota disajikan pada tabel berikut:`),
+      N.cap("Susunan dan Peran Tim Pelaksana"), teamTable(M.members, I.peranOf), para("Uraian tugas setiap peran dalam tim adalah sebagai berikut:"), olList(peranLines(M.members, I.peranOf)),
+      N.h2("g. Rincian Anggaran dan Biaya"), para(`Kegiatan ini dibiayai dari ${esc(I.sumberAnggaran)}${I.nomorDipa ? ` (DIPA Nomor ${esc(I.nomorDipa)})` : ""} dengan jumlah ${esc(I.anggaran || "Rp……………")}, dengan rincian sebagai berikut:`),
+      N.cap("Rincian Anggaran dan Biaya"), rabTable(I.rab, I.total),
+      N.h2("h. Tata Waktu/Jadwal Pelaksanaan"), para("Tahapan dan jadwal pelaksanaan kegiatan adalah sebagai berikut:"), N.cap("Tata Waktu Pelaksanaan Kegiatan"), ganttTable(sched));
 
-    /* B. Pelaksanaan kegiatan */
-    const modesRow = M.modes.length > 1 ? `<p class="para">Rincian panjang lintasan menurut moda: ${esc(M.modes.map((m) => `${m.drone ? "penerbangan drone" : m.mode} ±${num(m.km, 2)} km`).join("; "))}. Total pada tabel merupakan penjumlahan angka harian yang telah dibulatkan.</p>` : "";
-    body.push(h2("B. PELAKSANAAN KEGIATAN"), h3("1. Keadaan Lokasi"), noteBlock(notes, "lokasi"),
-      h3("2. Waktu Pelaksanaan"), noteBlock(notes, "waktu"),
-      `<p class="cap">Tabel 1 Rekap Sesi Perekaman Data SMART</p>`,
-      `<table class="data"><thead><tr><th>Hari</th><th>Tanggal</th><th>Sesi Perekaman SMART</th><th>Moda</th><th>Jarak (km)</th><th>Catatan Temuan</th></tr></thead><tbody>${M.days.map((d) => `<tr><td class="c">${d.no}</td><td class="nw">${esc(nb(tglPanjang(d.date, true)))}</td><td class="c">${d.start}–${d.end}</td><td class="c">${esc(d.drone ? "Drone" : d.transport || "-")}</td><td class="r">${num(d.km, 2)}</td><td class="r">${d.nObs}</td></tr>`).join("")}<tr class="total"><td></td><td colspan="3">Total</td><td class="r">${num(t.km, 2)}</td><td class="r">${t.obs}</td></tr></tbody></table>`, modesRow,
-      h3("3. Alat dan Bahan"), `<p class="para">Alat dan bahan yang digunakan dalam kegiatan ini adalah sebagai berikut:</p>`, `<p class="cap">Tabel 2 Alat dan Bahan</p>`, alatTable(I.alat),
-      h3("4. Metode"), `<p class="sub">a. Metode Pelaksanaan</p>`,
-      `<p class="para">Kegiatan dilaksanakan berdasarkan Keputusan Direktur Jenderal Konservasi Sumber Daya Alam dan Ekosistem Nomor 74 Tahun 2025 tentang Panduan Patroli Berbasis Spatial Monitoring and Reporting Tool (SMART), dengan tahapan sebagai berikut:</p>`, noteBlock(notes, "metode"),
-      `<p class="sub">b. Metode Analisis Data</p>`, noteBlock(notes, "analisis"),
-      h3("5. Tim Pelaksana"), `<p class="para">${esc(teamSentence(M.members))} Susunan tim disajikan pada tabel berikut:</p>`,
-      `<p class="cap">Tabel 3 Tim Pelaksana Kegiatan</p>`, teamTable(M.members, (m) => (m.isLeader ? "Ketua Tim" : "")),
-      h3("6. Anggaran dan Tata Waktu"),
-      `<p class="para">Kegiatan ini dibiayai dari ${esc(I.sumberAnggaran)}${I.nomorDipa ? ` (DIPA Nomor ${esc(I.nomorDipa)})` : ""} dengan jumlah ${esc(I.anggaran || "Rp……………")}, dengan rincian sebagai berikut:</p>`,
-      `<p class="cap">Tabel 4 Ringkasan Rincian Anggaran</p>`, rabTable(I.rab, I.total),
-      `<p class="para">Tata waktu pelaksanaan kegiatan adalah sebagai berikut:</p>`, `<p class="cap">Tabel 5 Tata Waktu Pelaksanaan</p>`,
-      ganttTable([[`Penyusunan Rencana Pelaksanaan Kegiatan ${I.judul}`, addDays(I.mulai, -I.rencanaHari), addDays(I.mulai, -1)], [`Pelaksanaan Kegiatan ${I.judul}`, I.mulai, I.selesai],
-        [`Penyusunan Laporan Kegiatan ${I.judul}`, addDays(I.selesai, 1), I.tanggalLaporan < I.selesai ? I.selesai : I.tanggalLaporan]].filter((r) => r[1] <= r[2])));
-
-    /* C. Hasil dan pembahasan */
-    body.push(h2("C. HASIL DAN PEMBAHASAN"), h3("1. Hasil"), noteBlock(notes, "hasil"), `<div class="blk" data-block="tabel_temuan">`);
-    let fig = 0, tab = 5;
+    /* 3. Hasil yang dicapai */
+    body.push(N.h1("3. Hasil yang dicapai"), N.h2("a. Hasil"), noteBlock(notes, "hasil"), `<div class="blk" data-block="tabel_temuan">`);
+    let fig = 0;
     M.groups.forEach((gr, gi) => {
-      const C = columnsFor(gr, M);
-      body.push(`<p class="sub">${String.fromCharCode(97 + gi)}. ${esc(gr.label)}</p>`, noteBlock(notes, "hasil_" + gr.top));
+      body.push(N.h3(`${gi + 1}) ${gr.label}`), noteBlock(notes, "hasil_" + gr.top, 3));
       const hasilPhotos = gr.items.flatMap((o) => o.photos).filter((ph) => ph.place === "hasil");
       if (hasilPhotos.length) {
-        body.push(`<div class="photos">${hasilPhotos.map((ph) => { const o = ph.ob; ph.fig = ++fig; return photoFig(ph, photoUrls.get(ph.file), `Gambar ${fig}. ${esc(o.catLabel)}${o.attrs.find((a) => a.key === "tipetemuan") ? " – " + esc(o.attrs.find((a) => a.key === "tipetemuan").text) : ""}${o.wp.grid ? ` di Grid ${esc(o.wp.grid)}` : ""}${o.wp.zona ? ` (${esc(o.wp.zona)})` : ""}`); }).join("")}</div>`);
+        body.push(`<div class="photos">${hasilPhotos.map((ph) => { const o = ph.ob; ph.fig = ++fig; const tip = attrOf(o, "tipetemuan"); return photoFig(ph, photoUrls.get(ph.file), `Gambar ${fig}. ${esc(o.catLabel)}${tip ? " – " + esc(tip.text) : ""}${o.wp.grid ? ` di Grid ${esc(o.wp.grid)}` : ""}${o.wp.zona ? ` (${esc(o.wp.zona)})` : ""}`); }).join("")}</div>`);
       }
-      body.push(`<p class="cap">Tabel ${++tab} Catatan ${esc(gr.label)}</p>`, `<table class="data detail"><thead><tr><th>No</th><th>Tanggal/ Jam</th><th>Koordinat X/ Y</th>${C.multi ? "<th>Jenis Temuan</th>" : ""}${C.grid ? "<th>Grid</th>" : ""}${C.zona ? "<th>Zona</th>" : ""}${C.heads.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>
-        ${gr.items.map((o, i) => `<tr${o.dup ? ' class="dup"' : ""}><td class="c">${i + 1}${o.dup ? "*" : ""}</td><td class="nw">${esc(nb(tglPanjang(o.wp.date)))}<br>${esc((o.wp.time || "").substr(0, 5))}</td><td class="nw">${xy(o.wp.x)}<br>${xy(o.wp.y)}</td>${C.multi ? `<td>${esc(o.catLabel)}</td>` : ""}${C.grid ? `<td class="c">${esc(o.wp.grid || "-")}</td>` : ""}${C.zona ? `<td>${esc(o.wp.zona || "-")}</td>` : ""}${C.keys.map((k) => { const a = o.attrs.find((x) => x.key === k); return `<td>${a ? (/^jenis(satwa|tumbuhan|biota)/.test(k) ? sci(a.text) : esc(a.text)) : "-"}</td>`; }).join("")}</tr>`).join("")}</tbody></table>`);
-      const notesUnder = [];
-      if (gr.items.some((o) => o.dup)) notesUnder.push("* Kategori, jenis, tanggal, dan koordinat sama dengan catatan lain; perlu diperiksa apakah pengamatan berbeda atau pencatatan ganda.");
-      if (gr.unidentified) notesUnder.push('"Belum ada di daftar aplikasi": jenis belum tersedia dalam daftar jenis aplikasi SMART dan tidak dihitung sebagai jenis tersendiri.');
-      if (notesUnder.length) body.push(`<p class="fn">${notesUnder.map(esc).join("<br>")}</p>`);
+      body.push(N.cap(`Ringkasan Catatan ${gr.label}`), rekapTable(gr, M));
+      if (gr.unidentified) body.push(`<p class="fn">${esc(unidNote)}</p>`);
     });
-    body.push(`</div>`, h3("2. Pembahasan"), noteBlock(notes, "pembahasan"));
+    const kam = kameraRows(I.facts || {});
+    if (C.kamera && kam.length) body.push(N.h3(`${M.groups.length + 1}) Kamera Jebak`), para("Rekap pemasangan dan pengunduhan data kamera jebak disajikan pada tabel berikut:", 3), N.cap("Rekap Kamera Jebak"), kameraTable(kam));
+    body.push(`</div>`, N.h2("b. Pembahasan"), noteBlock(notes, "pembahasan"));
 
-    /* D. Simpulan dan saran, E. Penutup */
-    body.push(h2("D. SIMPULAN DAN SARAN"), h3("1. Simpulan"), noteBlock(notes, "kesimpulan"), h3("2. Saran dan Rekomendasi"), noteBlock(notes, "saran"),
-      h2("E. PENUTUP"), noteBlock(notes, "penutup"));
-    body.push(`<table class="sign right" data-block="tanda_tangan"><tr><td></td><td>${sign([`${I.kota || "………"}, ${pengesahanTgl}`, "Ketua Tim Pelaksana,"], I.penyusun ? I.penyusun.name : "", I.penyusun ? I.penyusun.nip : "")}</td></tr></table>`);
+    /* 4. Simpulan dan saran, 5. Penutup */
+    body.push(N.h1("4. Simpulan dan saran"), N.h2("a. Simpulan"), noteBlock(notes, "kesimpulan"), N.h2("b. Saran"), noteBlock(notes, "saran"),
+      N.h1("5. Penutup"), noteBlock(notes, "penutup", 1));
+    body.push(closingHtml(I.kota, tglTtd, penyusun.jabatan ? `${penyusun.jabatan},` : "Ketua Tim Pelaksana,", penyusun.name, penyusun.nip));
+    body.push(lampiranIndex(["Surat Tugas", "Matriks Data Hasil Kegiatan", "Matriks Analisis Data", "Peta Kerja/Peta Hasil Kegiatan", "Dokumentasi Kegiatan"]));
 
-    /* Lampiran */
-    body.push(`<h1 class="pb" id="lampiran">LAMPIRAN</h1><h2 class="lamp">A. Peta Pelaksanaan Kegiatan</h2>`);
+    /* Lampiran (Memorandum, Lampiran 4) */
+    body.push(N.h1("LAMPIRAN", "front", true), N.h2("1. Surat Tugas", "lamp"));
+    if ((scans || []).length) body.push(scans.map((u) => `<figure class="scan"><img src="${u}" alt="Surat Tugas"></figure>`).join(""));
+    else body.push(`<p class="para placeholder noprint">Unggah scan Surat Tugas (JPG, PNG, atau PDF) di panel kiri untuk lampiran ini.</p>`);
+
+    // Lampiran 2 dan 3 dicetak mendatar supaya tabel matriks tetap memakai huruf 11 pt
+    body.push(`<div class="landscape">`, N.h2("2. Matriks Data Hasil Kegiatan", "lamp"), para("Rincian setiap catatan temuan hasil patroli SMART disajikan pada tabel berikut.", 1));
+    M.groups.forEach((gr, gi) => {
+      body.push(N.h3(`${letter(gi)}. ${gr.label}`), N.cap(`Matriks Data ${gr.label}`), detailTable(gr, M));
+      const fn = [gr.items.some((o) => o.dup) ? dupNote : "", gr.unidentified ? unidNote : ""].filter(Boolean);
+      if (fn.length) body.push(`<p class="fn">${fn.map(esc).join("<br>")}</p>`);
+    });
+    if (!M.groups.length) body.push(para("Tidak ada catatan temuan.", 1));
+
+    const mx = matrixTable(M);
+    body.push(N.h2("3. Matriks Analisis Data", "lamp", true),
+      para(`Sebaran jumlah catatan temuan per ${mx.byGrid ? "grid patroli" : "hari"} dan kategori utama disajikan pada tabel berikut. Grid dengan jumlah catatan aktivitas manusia terbanyak menjadi prioritas tindak lanjut.`, 1),
+      N.cap(`Matriks Sebaran Catatan Temuan per ${mx.byGrid ? "Grid" : "Hari"} dan Kategori`), M.groups.length ? mx.html : para("Tidak ada catatan temuan.", 1), `</div>`);
+
+    body.push(N.h2("4. Peta Kerja/Peta Hasil Kegiatan", "lamp", true));
     let mi = 0;
     for (const gr of M.groups) {
       const m = maps.perTop && maps.perTop[gr.top];
-      if (m) body.push(`<h3>${++mi}. ${esc(gr.label)}</h3><figure class="map"><img src="${m.dataUrl}" alt=""></figure>`);
+      if (m) body.push(N.h3(`${letter(mi++)}. Peta Sebaran ${gr.label}`), `<figure class="map"><img src="${m.dataUrl}" alt=""></figure>`);
     }
-    if (maps.tracking) body.push(`<h3>${++mi}. Peta Tracking Kegiatan</h3><figure class="map" data-block="peta"><img src="${maps.tracking.dataUrl}" alt=""></figure>`);
+    if (maps.tracking) body.push(N.h3(`${letter(mi++)}. Peta Tracking Kegiatan`), `<figure class="map" data-block="peta"><img src="${maps.tracking.dataUrl}" alt=""></figure>`);
 
-    const kegiatan = M.photos.filter((ph) => ph.place === "kegiatan");
-    body.push(`<h2 class="lamp pb">B. Dokumentasi Pelaksanaan Kegiatan</h2>`);
-    if (kegiatan.length) body.push(`<div class="photos">${kegiatan.map((ph) => photoFig(ph, photoUrls.get(ph.file), `${esc(ph.ob.catLabel)}${ph.ob.attrs.find((a) => a.key === "tipetemuan") ? " – " + esc(ph.ob.attrs.find((a) => a.key === "tipetemuan").text) : ""}`)).join("")}</div>`);
-    else body.push(`<p class="para">Belum ada foto dokumentasi kegiatan.</p>`);
-
-    const bio = M.photos.filter((ph) => ph.place === "biodiv");
-    body.push(`<h2 class="lamp pb">C. Dokumentasi Keanekaragaman Hayati</h2>`);
+    const kegiatan = M.photos.filter((ph) => ph.place === "kegiatan"), bio = M.photos.filter((ph) => ph.place === "biodiv");
+    body.push(N.h2("5. Dokumentasi Kegiatan", "lamp", true), N.h3("a. Pelaksanaan Kegiatan"));
+    if (kegiatan.length) body.push(`<div class="photos">${kegiatan.map((ph) => { const tip = attrOf(ph.ob, "tipetemuan"); return photoFig(ph, photoUrls.get(ph.file), `${esc(ph.ob.catLabel)}${tip ? " – " + esc(tip.text) : ""}`); }).join("")}</div>`);
+    else body.push(para("Belum ada foto dokumentasi pelaksanaan kegiatan.", 3));
+    body.push(N.h3("b. Keanekaragaman Hayati"));
     if (bio.length) body.push(`<div class="photos" data-block="foto">${bio.map((ph) => photoFig(ph, photoUrls.get(ph.file), ph.ob.species ? sci(ph.ob.species) : esc(ph.ob.catLabel))).join("")}</div>`);
-    else body.push(`<p class="para">Tidak ada foto keanekaragaman hayati.</p>`);
+    else body.push(para("Tidak ada foto keanekaragaman hayati.", 3));
 
-    body.push(`<h2 class="lamp pb">D. Surat Tugas</h2>`);
-    if ((scans || []).length) body.push(scans.map((u) => `<figure class="scan"><img src="${u}" alt="Surat Tugas"></figure>`).join(""));
-    else body.push(`<p class="para placeholder">Unggah scan Surat Tugas (JPG, PNG, atau PDF) di panel kiri untuk verifikasi penugasan.</p>`);
-
-    return { html: `<section class="sec-front">${front.join("\n")}</section>\n<section class="sec-body">${body.join("\n")}</section>`, info: I };
+    /* Sampul, lembar pengesahan, daftar isi, daftar tabel */
+    const cover = coverHtml({ jenis: "LAPORAN PELAKSANAAN KEGIATAN", judul: I.judulLengkap, balai, logo: profile.logo, nomorST: I.nomorST, periode: periodeTxt, kota: I.kota, bulanTahun: bulanTahun(I.tanggalLaporan) });
+    const kv = [["Judul Kegiatan", I.judulLengkap], ["Waktu Kegiatan", periodeTxt], ["Lokasi Kegiatan", `${I.lokasi}${I.gridText ? `, ${I.gridText}` : ""}`],
+      ["Pelaksana", `Tim ${teamShort(M.members)}`], ["Jumlah Anggaran", I.anggaran || "Rp……………"], ["Sumber Anggaran", I.sumberAnggaran],
+      ["Disusun di", I.kota || "……………"], ["Pada Tanggal", tglTtd], ["Oleh", "Tim Pelaksana Kegiatan"]];
+    const peng = pengesahanHtml(profile, kv, {
+      left: { head: "Menyetujui", jab: profile.kasubbagJabatan || "Kepala Subbagian Tata Usaha,", nama: profile.kasubbagNama, nip: profile.kasubbagNip },
+      right: { head: "", jab: "Tim Pelaksana,", nama: ketua.name, nip: ketua.nip },
+      bottom: { head: "Mengetahui", jab: profile.kepalaBalaiJabatan || "Kepala Balai,", nama: profile.kepalaBalaiNama, nip: profile.kepalaBalaiNip }
+    });
+    const toc = [{ lv: 1, text: "LEMBAR PENGESAHAN" }, { lv: 1, text: "DAFTAR ISI" }, { lv: 1, text: "DAFTAR TABEL" }, ...N.toc];
+    return {
+      html: `<section class="sec-cover">${cover}</section>\n<section class="sec-front">${peng}${tocHtml(toc, N.tables)}</section>\n<section class="sec-body">${body.join("\n")}</section>`,
+      info: I
+    };
   }
 
-  window.SRGReport = { KEGIATAN, kegiatanOf, kegText, kegTeamCheck, metodeLines, alatFor, judulLengkap, buildModel, renderHTML, autoNotes, deriveInfo, readiness, periode, periodeSd, tglPanjang, num, hhmm, fmtNip, esc, lines, DAY_COLORS, BIODIV,
-    sign, noteBlock, terbilang, nTxt, rupiah, rp, numVal, addDays, parseISO, inGeom, BULAN, listText, PH, fixText, sci, nb,
-    DEFAULT_DASAR, DEFAULT_METODE, DEFAULT_ALAT, DEFAULT_RAB, DEFAULT_AKUN, UNSUR, UNSUR_GROUPS, guessUnsur, unsurGroup, teamSentence, teamShort, teamTable, alatTable,
-    rabRows, rabTable, terbilangRupiah, sumberAnggaran, dasarList, ganttTable, kopHtml, titleHtml, hasPH };
+  window.SRGReport = { KEGIATAN, kegiatanOf, kegText, kegTeamCheck, metodeLines, alatFor, judulLengkap, buildModel, renderHTML, autoNotes, deriveInfo, readiness, periode, periodeSd, tglPanjang, num, fmtNum, hhmm, fmtNip, esc, lines, DAY_COLORS, BIODIV,
+    sign, noteBlock, olList, spName, terbilang, nTxt, rupiah, rp, numVal, addDays, parseISO, inGeom, BULAN, listText, PH, fixText, sci, nb, jam, cap1, lowerVocab,
+    DEFAULT_DASAR, DEFAULT_METODE, DEFAULT_ALAT, DEFAULT_RAB, DEFAULT_AKUN, DEFAULT_ALAMAT, DEFAULT_KONTAK, UNSUR, UNSUR_SHORT, UNSUR_GROUPS, MASYARAKAT, APARAT, guessUnsur, unsurGroup, unsurCount, teamSentence, teamShort, teamTable, alatTable,
+    PERAN, defaultPeran, peranLines, lampiranIndex, rabRows, rabTable, terbilangRupiah, sumberAnggaran, dasarList, sortDasar, ganttTable, kopHtml, titleHtml, coverHtml, pengesahanHtml, tocHtml, closingHtml, numbering, para, bulanTahun, hasPH,
+    FAKTA, KAMERA_COLS, faktaCtx, faktaShown, faktaOpts, filled, LATIN, italicLatin, KAWASAN_LAMA };
 })();

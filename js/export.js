@@ -53,10 +53,14 @@
     download(new Blob([doc], { type: "application/vnd.google-earth.kml+xml" }), `patroli_${safeName(M.patrol.id)}.kml`);
   }
 
-  /* ---------- Word (.docx) format LPK ---------- */
+  /* ---------- Word (.docx) sesuai Memorandum M.57: huruf Arial 12 pt, tabel 11 pt ---------- */
   // A4, margin kiri 4 cm, lainnya 3 cm: lebar isi 14 cm ≈ 529 px pada 96 dpi
   const PAGE_W_PX = 525;
-  const FONT = "Times New Roman";
+  const FONT = "Arial";
+  const SZ = 24, SZ_T = 22; // ukuran dalam setengah poin: isi 12 pt, tabel dan keterangan 11 pt
+  const TW_P = 7937, TW_L = 13436; // lebar bidang isi halaman tegak dan mendatar (DXA)
+  const IND = 360; // satu tingkat inden (0,63 cm) seperti contoh Memorandum
+  const FIRST = 567; // inden baris pertama paragraf (1 cm)
 
   // aspect: rasio lebar/tinggi untuk crop tengah (foto 4:3 agar seragam)
   async function imageData(src, maxPx, aspect) {
@@ -79,11 +83,14 @@
   function makeBuilder() {
     const D = window.docx;
     if (!D) throw new Error("Pustaka docx belum termuat (perlu koneksi internet sekali).");
+    const A = D.AlignmentType;
     const none = { style: D.BorderStyle.NONE, size: 0, color: "FFFFFF" };
     const noBorders = { top: none, bottom: none, left: none, right: none, insideHorizontal: none, insideVertical: none };
     const thin = { style: D.BorderStyle.SINGLE, size: 4, color: "000000" };
     const borders = { top: thin, bottom: thin, left: thin, right: thin, insideHorizontal: thin, insideVertical: thin };
     const BODY = { line: 360, after: 0 };
+    // tw: lebar bidang isi bagian yang sedang disusun; lamp: sudah masuk lampiran; noPB: abaikan ganti halaman pada elemen pertama bagian
+    const st = { tw: TW_P, lamp: false, noPB: false };
 
     // Teks inline -> TextRun (menangani <b>, <i>, <br>, <small>)
     function runs(node, fmt = {}, out = []) {
@@ -93,7 +100,7 @@
           const tag = c.tagName;
           if (tag === "BR") out.push(new D.TextRun({ text: " ", break: 1, ...fmt }));
           else if (tag === "B" || tag === "STRONG") runs(c, { ...fmt, bold: true }, out);
-          else if (tag === "SMALL") runs(c, { ...fmt, size: (fmt.size || 24) - 2 }, out);
+          else if (tag === "SMALL") runs(c, { ...fmt, size: (fmt.size || SZ) - 2 }, out);
           else if (tag === "I" || tag === "EM") runs(c, { ...fmt, italics: true }, out);
           else if (tag === "MARK") runs(c, { ...fmt, highlight: "yellow" }, out);
           else runs(c, fmt, out);
@@ -104,12 +111,11 @@
     }
     const para = (el, opts = {}, fmt = {}) => new D.Paragraph({ children: runs(el, fmt), ...opts });
     const textPara = (text, opts = {}, fmt = {}) => new D.Paragraph({ children: [new D.TextRun({ text: text || " ", ...fmt })], ...opts });
-    const numbered = (n, text, fmt = {}) => new D.Paragraph({ alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { left: 720, hanging: 360 }, children: [new D.TextRun({ text: `${n}.\t${text}`, ...fmt })], tabStops: [{ type: D.TabStopType.LEFT, position: 720 }] });
-    const bodyLine = (text) => {
-      const m = text.match(/^(\d+)[.)]\s+(.*)$/), a = text.match(/^([a-z])[.)]\s+(.*)$/);
-      if (a) return new D.Paragraph({ alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { left: 1080, hanging: 360 }, children: [new D.TextRun({ text: `${a[1]}.\t${a[2]}` })], tabStops: [{ type: D.TabStopType.LEFT, position: 1080 }] });
-      return m ? numbered(m[1], m[2]) : new D.Paragraph({ alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { firstLine: 720 }, children: [new D.TextRun({ text })] });
-    };
+    // Tingkat inden dari kelas lv1/lv2/lv3: 1 = di bawah judul bagian, 2 = di bawah sub-bagian (a, b, …), 3 = di bawah butir 1), 2), …
+    const lvOf = (el) => { const m = String(el.className || "").match(/\blv(\d)\b/); return m ? Number(m[1]) : 2; };
+    // Butir bernomor/berhuruf: label pada inden dasar, teks satu tingkat lebih dalam (inden gantung)
+    const itemPara = (left, label, kids) => new D.Paragraph({ alignment: A.JUSTIFIED, spacing: BODY, indent: { left: left + IND, hanging: IND }, tabStops: [{ type: D.TabStopType.LEFT, position: left + IND }], children: [new D.TextRun({ text: `${label}\t` }), ...kids] });
+    const bodyPara = (left, kids) => new D.Paragraph({ alignment: A.JUSTIFIED, spacing: BODY, indent: { left, firstLine: FIRST }, children: kids });
 
     // Narasi: per baris (dipisah <br>) dengan format inline (nama ilmiah miring) tetap terbawa
     function noteLines(el) {
@@ -126,9 +132,11 @@
       walk(el); flush();
       return out.filter((x) => x.textContent.trim());
     }
-    function bodyLineEl(span) {
+    // "1. …" menjadi butir bernomor, "a. …" butir berhuruf di bawahnya, baris lain paragraf biasa
+    function bodyLineEl(span, lv) {
+      const base = lv * IND;
       const text = span.textContent.replace(/^\s+/, "");
-      const m = text.match(/^(\d+)[.)]\s+/), a = text.match(/^([a-z])[.)]\s+/), pre = m || a;
+      const m = text.match(/^(\d+[.)])\s+/), a = text.match(/^([a-z][.)])\s+/), pre = m || a;
       if (pre) {
         // buang awalan nomor dari teks pertama; nomor ditulis ulang dengan tab
         let cut = span.textContent.length - text.length + pre[0].length;
@@ -136,62 +144,99 @@
         for (let n = tw.nextNode(); n && cut > 0; n = tw.nextNode()) { const k = Math.min(cut, n.textContent.length); n.textContent = n.textContent.slice(k); cut -= k; }
       }
       const kids = runs(span);
-      if (a) return new D.Paragraph({ alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { left: 1080, hanging: 360 }, children: [new D.TextRun({ text: `${a[1]}.\t` }), ...kids], tabStops: [{ type: D.TabStopType.LEFT, position: 1080 }] });
-      if (m) return new D.Paragraph({ alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { left: 720, hanging: 360 }, children: [new D.TextRun({ text: `${m[1]}.\t` }), ...kids], tabStops: [{ type: D.TabStopType.LEFT, position: 720 }] });
-      return new D.Paragraph({ alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { firstLine: 720 }, children: kids });
+      if (a) return itemPara(base + IND, a[1], kids);
+      if (m) return itemPara(base, m[1], kids);
+      return bodyPara(base, kids);
+    }
+
+    // Judul bagian: nomor/huruf menggantung, teks sejajar seperti contoh Memorandum
+    const NUM = /^((?:\d+|[a-z])[.)])\s+(.*)$/;
+    function heading(el, level, outline, left, bold, extra = {}) {
+      const t = el.textContent.replace(/\s+/g, " ").trim(), m = t.match(NUM);
+      const pb = el.classList.contains("pb") && !st.noPB;
+      st.noPB = false;
+      return new D.Paragraph({
+        heading: level, outlineLevel: outline, keepNext: true, keepLines: true, pageBreakBefore: pb,
+        spacing: { before: 240, after: 120, line: 360 },
+        indent: m ? { left: left + IND, hanging: IND } : { left },
+        tabStops: m ? [{ type: D.TabStopType.LEFT, position: left + IND }] : undefined,
+        children: m ? [new D.TextRun({ text: `${m[1]}\t`, bold }), new D.TextRun({ text: m[2], bold })] : runs(el, { bold }),
+        ...extra
+      });
     }
 
     async function imagePara(src, widthPx, opts = {}) {
       const im = await imageData(src, opts.maxPx || 1600, opts.aspect);
       let w = widthPx, h = Math.round((widthPx * im.h) / im.w);
       if (opts.maxH && h > opts.maxH) { w = Math.round((w * opts.maxH) / h); h = opts.maxH; }
-      return new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [new D.ImageRun({ data: im.data, transformation: { width: w, height: h } })] });
+      return new D.Paragraph({ alignment: A.CENTER, children: [new D.ImageRun({ data: im.data, transformation: { width: w, height: h } })] });
     }
 
+    // Lebar teks sebenarnya pada huruf Arial diukur dengan canvas (1 px = 15 DXA pada 96 dpi), ditambah 6% cadangan
+    const ctx2d = document.createElement("canvas").getContext("2d");
+    const textW = (t, size, bold) => { ctx2d.font = `${bold ? "bold " : ""}${size / 2}pt Arial, "Liberation Sans", Helvetica, sans-serif`; return Math.ceil(ctx2d.measureText(t).width * 15 * 1.06); };
     function dataTable(el) {
-      const small = el.classList.contains("detail") || el.classList.contains("gantt");
-      const size = el.classList.contains("detail") ? 16 : small ? 18 : 20;
-      // Lebar kolom mengikuti tata letak di layar, supaya kolom teks tidak terjepit
-      const ref = [...el.querySelectorAll("tr")].find((tr) => [...tr.children].every((td) => td.colSpan === 1 && td.rowSpan === 1) && tr.children.length === Math.max(...[...el.querySelectorAll("tr")].map((r) => [...r.children].reduce((a, td) => a + td.colSpan, 0))));
-      const px = ref ? [...ref.children].map((td) => td.getBoundingClientRect().width) : [];
-      const tot = px.reduce((a, b) => a + b, 0);
-      let colW = tot > 0 ? px.map((w) => Math.max(300, Math.round((w / tot) * 7937))) : undefined;
-      // Kolom angka/tengah (No, MAK, jumlah, rupiah) diberi lebar minimum supaya angkanya tidak terpotong ke baris baru
-      if (colW) {
-        const need = colW.map(() => 0), fixed = colW.map(() => false);
-        for (const tr of el.querySelectorAll("tr")) {
-          let ci = 0;
-          for (const td of tr.children) {
-            if (td.colSpan === 1) {
-              const t = td.textContent.trim(), longest = Math.max(...td.innerText.split("\n").map((x) => x.trim().length));
-              const cw = size * 5 + 4, word = Math.max(0, ...t.split(/\s+/).map((w) => w.length));
-              if (td.tagName === "TH") need[ci] = Math.max(need[ci], word * (cw + 10) + 140);
-              else if (td.classList.contains("nw") || ((td.classList.contains("r") || td.classList.contains("c")) && t.length <= 16)) { need[ci] = Math.max(need[ci], longest * cw + 140); fixed[ci] = true; }
-              else need[ci] = Math.max(need[ci], Math.min(word, 16) * cw + 140);
-            }
-            ci += td.colSpan;
+      const TW = st.tw, size = SZ_T, tight = el.classList.contains("gantt");
+      const allRows = [...el.querySelectorAll("tr")];
+      const nCols = Math.max(...allRows.map((r) => [...r.children].reduce((a, td) => a + td.colSpan, 0)));
+      // Lebar minimum tiap kolom: kolom angka/tanggal/NIP (rata tengah/kanan atau tanpa putus) selebar isinya,
+      // kolom teks minimal selebar kata terpanjang, judul kolom minimal selebar kata terpanjangnya
+      // Kolom awal setiap sel, memperhitungkan sel rowspan dari baris di atasnya
+      const startCol = new Map(), occ = allRows.map(() => []);
+      allRows.forEach((tr, ri) => {
+        let ci = 0;
+        for (const td of tr.children) {
+          while (occ[ri][ci]) ci++;
+          startCol.set(td, ci);
+          for (let r = 0; r < td.rowSpan && ri + r < occ.length; r++) for (let c = 0; c < td.colSpan; c++) occ[ri + r][ci + c] = true;
+          ci += td.colSpan;
+        }
+      });
+      const pad = tight ? 70 : 170, need = Array(nCols).fill(0), fixed = Array(nCols).fill(false), want = Array(nCols).fill(0);
+      for (const tr of allRows) {
+        for (const td of tr.children) {
+          const ci = startCol.get(td);
+          if (td.colSpan === 1 && ci < nCols) {
+            const head = td.tagName === "TH", bold = head || tr.classList.contains("total") || tr.classList.contains("grp");
+            const lines = td.innerText.split("\n").map((x) => x.trim()).filter(Boolean);
+            const words = lines.flatMap((l) => l.split(/[ \t]+/)).filter(Boolean);
+            const maxWord = Math.max(0, ...words.map((w) => textW(w, size, bold)));
+            const maxLine = Math.max(0, ...lines.map((l) => textW(l, size, bold)));
+            if (head) need[ci] = Math.max(need[ci], maxWord + pad);
+            else if (td.classList.contains("nw") || ((td.classList.contains("r") || td.classList.contains("c")) && td.textContent.trim().length <= 16)) { need[ci] = Math.max(need[ci], maxLine + pad); fixed[ci] = true; }
+            else { need[ci] = Math.max(need[ci], Math.min(maxWord, 2200) + pad); want[ci] = Math.max(want[ci], Math.min(maxLine, 6000) + pad); }
           }
         }
-        colW = colW.map((w, i) => (fixed[i] ? Math.max(w, need[i]) : w));
-        // Kolom teks bebas dibagi dari sisa lebar: minimal selebar kata terpanjang, sisanya mengikuti proporsi di layar
-        const fixW = colW.reduce((a, w, i) => a + (fixed[i] ? w : 0), 0), flex = colW.map((_, i) => i).filter((i) => !fixed[i]);
-        const minW = (i) => Math.max(300, need[i] || 0), avail = 7937 - fixW, sumNeed = flex.reduce((a, i) => a + minW(i), 0);
-        if (flex.length && sumNeed <= avail) {
-          const ex = flex.map((i) => Math.max(0, colW[i] - minW(i))), exSum = ex.reduce((a, b) => a + b, 0);
-          flex.forEach((i, k) => (colW[i] = Math.round(minW(i) + (avail - sumNeed) * (exSum ? ex[k] / exSum : 1 / flex.length))));
-        }
-        const s2 = colW.reduce((a, b) => a + b, 0);
-        if (s2 > 7937) colW = colW.map((w) => Math.round((w * 7937) / s2));
       }
+      if (tight) for (let i = 0; i < nCols; i++) fixed[i] = i !== 1; // tata waktu: hanya kolom tahapan yang melebar
+      let colW = need.map((n) => Math.max(n, tight ? 160 : 300));
+      // Judul kolom gabungan (mis. nama bulan di atas kolom minggu) tidak boleh terpotong: kekurangan lebarnya dibagi rata
+      for (const tr of allRows) for (const td of tr.children) {
+        const ci = startCol.get(td);
+        if (td.tagName !== "TH" || td.colSpan < 2 || ci + td.colSpan > nCols) continue;
+        const words = td.innerText.split(/\s+/).filter(Boolean);
+        const req = Math.max(0, ...words.map((w) => textW(w, size, true))) + pad;
+        const have = colW.slice(ci, ci + td.colSpan).reduce((a, b) => a + b, 0);
+        if (req > have) for (let c = ci; c < ci + td.colSpan; c++) colW[c] += Math.ceil((req - have) / td.colSpan);
+      }
+      const fixW = colW.reduce((a, w, i) => a + (fixed[i] ? w : 0), 0), flex = colW.map((_, i) => i).filter((i) => !fixed[i]);
+      const avail = TW - fixW, sumMin = flex.reduce((a, i) => a + colW[i], 0);
+      if (!flex.length) colW = colW.map((w) => Math.round((w * TW) / fixW));
+      else if (sumMin <= avail) {
+        // Sisa lebar dibagi ke kolom teks sesuai panjang isinya
+        const ex = flex.map((i) => Math.max(0, want[i] - colW[i])), exSum = ex.reduce((a, b) => a + b, 0);
+        flex.forEach((i, k) => (colW[i] = Math.round(colW[i] + (avail - sumMin) * (exSum ? ex[k] / exSum : 1 / flex.length))));
+      } else if (avail > TW * 0.25) flex.forEach((i) => (colW[i] = Math.round((colW[i] * avail) / sumMin)));
+      else { const tot = colW.reduce((a, b) => a + b, 0); colW = colW.map((w) => Math.round((w * TW) / tot)); }
       return new D.Table({
         width: { size: 100, type: D.WidthType.PERCENTAGE }, borders,
         columnWidths: colW, layout: colW ? D.TableLayoutType.FIXED : undefined,
-        rows: [...el.querySelectorAll("tr")].map((tr) => new D.TableRow({
-          tableHeader: tr.parentElement.tagName === "THEAD",
-          children: [...tr.children].map((td, k, arr) => {
-            const ci = arr.slice(0, k).reduce((a, x) => a + x.colSpan, 0), w = colW ? colW.slice(ci, ci + td.colSpan).reduce((a, b) => a + b, 0) : 0;
+        rows: allRows.map((tr) => new D.TableRow({
+          tableHeader: tr.parentElement.tagName === "THEAD", cantSplit: true,
+          children: [...tr.children].map((td) => {
+            const ci = startCol.get(td), w = colW ? colW.slice(ci, ci + td.colSpan).reduce((a, b) => a + b, 0) : 0;
             const head = td.tagName === "TH";
-            const align = head || td.classList.contains("c") ? D.AlignmentType.CENTER : td.classList.contains("r") ? D.AlignmentType.RIGHT : D.AlignmentType.LEFT;
+            const align = head || td.classList.contains("c") ? A.CENTER : td.classList.contains("r") ? A.RIGHT : A.LEFT;
             const grp = tr.classList.contains("grp");
             const fill = td.classList.contains("on") ? "FFC000" : head ? "D9D9D9" : tr.classList.contains("total") ? "F2F2F2" : grp ? "EFEFEF" : null;
             return new D.TableCell({
@@ -199,7 +244,7 @@
               columnSpan: td.colSpan > 1 ? td.colSpan : undefined, rowSpan: td.rowSpan > 1 ? td.rowSpan : undefined,
               verticalAlign: D.VerticalAlign.CENTER,
               shading: fill ? { type: D.ShadingType.CLEAR, color: "auto", fill } : undefined,
-              margins: { top: 30, bottom: 30, left: 60, right: 60 },
+              margins: tight ? { top: 20, bottom: 20, left: 20, right: 20 } : { top: 30, bottom: 30, left: 60, right: 60 },
               children: [new D.Paragraph({ alignment: align, children: runs(td, { size, bold: head || grp || tr.classList.contains("total") || undefined }) })]
             });
           })
@@ -207,12 +252,13 @@
       });
     }
 
-    function signCell(td, w) {
-      const kids = [];
+    // Tanda tangan: nama tidak ditebalkan/digarisbawahi (Memorandum, Lampiran 3 dan 4)
+    function signCell(td, w, align, gap) {
+      const kids = gap ? [textPara("")] : [];
       const sg = td.querySelector(".sg");
       if (sg) for (const d of sg.children) {
-        if (d.classList.contains("space")) kids.push(textPara(""), textPara(""));
-        else kids.push(textPara(d.textContent.trim(), { alignment: D.AlignmentType.CENTER }, d.classList.contains("nm") ? { bold: true, underline: {} } : {}));
+        if (d.classList.contains("space")) kids.push(textPara(""), textPara(""), textPara(""), textPara(""));
+        else kids.push(textPara(d.textContent.trim(), { alignment: align }));
       }
       return new D.TableCell({ borders: noBorders, width: w ? { size: w, type: D.WidthType.DXA } : undefined, columnSpan: td.colSpan > 1 ? td.colSpan : undefined, children: kids.length ? kids : [textPara("")] });
     }
@@ -226,7 +272,7 @@
           const img = f.querySelector("img"), cap = f.querySelector("figcaption");
           const kids = [];
           if (img) kids.push(await imagePara(img.src, 250, { maxPx: 900, aspect: 4 / 3 }));
-          if (cap) kids.push(para(cap, { alignment: D.AlignmentType.CENTER, spacing: { after: 160 } }, { size: 20 }));
+          if (cap) kids.push(para(cap, { alignment: A.CENTER, spacing: { after: 160 } }, { size: SZ_T }));
           else kids.push(textPara("", { spacing: { after: 120 } }));
           cells.push(new D.TableCell({ borders: noBorders, width: { size: 50, type: D.WidthType.PERCENTAGE }, children: kids }));
         }
@@ -244,49 +290,67 @@
         for (const c of el.children) {
           if (c.tagName === "IMG") out.push(textPara(""), await imagePara(c.src, 210, { maxPx: 800 }), textPara(""));
           else if (c.classList.contains("nologo")) out.push(textPara(""), textPara(""), textPara(""));
-          else out.push(para(c, { alignment: D.AlignmentType.CENTER, spacing: { before: c.classList.contains("cv-title") ? 0 : 480, line: 360 } }, { bold: true, size: c.classList.contains("cv-title") ? 28 : 24 }));
+          else out.push(para(c, { alignment: A.CENTER, spacing: { before: c.classList.contains("cv-title") ? 0 : 480, line: 360 } }, { bold: true, size: c.classList.contains("cv-title") ? 28 : SZ }));
         }
         return out;
       }
       if (cls.contains("kop")) {
-        // Kop surat: logo kiri, teks instansi di tengah, garis tebal di bawah
+        // Kop Memorandum: logo kiri; dua baris instansi biasa, nama Balai tebal, alamat dan kontak kecil; garis tebal di bawah.
+        // Kop melebar 1,5 cm ke margin kiri dan 0,75 cm ke kanan agar baris Direktorat Jenderal muat satu baris.
         const img = el.querySelector("img"), txt = [...el.querySelectorAll(".kop-t > div")];
-        const left = img ? [await imagePara(img.src, 62, { maxPx: 300 })] : [textPara("")];
-        const right = txt.map((d) => textPara(d.textContent.trim(), { alignment: D.AlignmentType.CENTER }, { bold: true, size: d.classList.contains("big") ? 26 : 20 }));
-        return [new D.Table({ width: { size: 100, type: D.WidthType.PERCENTAGE }, borders: noBorders, columnWidths: [1110, 6827], layout: D.TableLayoutType.FIXED, rows: [new D.TableRow({ children: [
-          new D.TableCell({ borders: noBorders, width: { size: 1110, type: D.WidthType.DXA }, verticalAlign: D.VerticalAlign.CENTER, children: left }),
-          new D.TableCell({ borders: noBorders, width: { size: 6827, type: D.WidthType.DXA }, verticalAlign: D.VerticalAlign.CENTER, children: right })] })] }),
-          new D.Paragraph({ border: { bottom: { style: D.BorderStyle.THICK, size: 18, color: "000000", space: 1 } }, children: [] }), textPara("")];
+        const OUT_L = 850, OUT_R = 425, LOGO = 1134, TXT = TW_P + OUT_L + OUT_R - LOGO;
+        const left = img ? [await imagePara(img.src, 68, { maxPx: 300 })] : [textPara("")];
+        const right = txt.map((d) => textPara(d.textContent.trim(), { alignment: A.CENTER, spacing: { after: 0, line: 240 } },
+          d.classList.contains("big") ? { bold: true, size: 28 } : { size: d.classList.contains("addr") ? 16 : 20 }));
+        return [new D.Table({ width: { size: LOGO + TXT, type: D.WidthType.DXA }, indent: { size: -OUT_L, type: D.WidthType.DXA }, borders: noBorders, columnWidths: [LOGO, TXT], layout: D.TableLayoutType.FIXED, rows: [new D.TableRow({ children: [
+          new D.TableCell({ borders: noBorders, width: { size: LOGO, type: D.WidthType.DXA }, verticalAlign: D.VerticalAlign.CENTER, children: left }),
+          new D.TableCell({ borders: noBorders, width: { size: TXT, type: D.WidthType.DXA }, verticalAlign: D.VerticalAlign.CENTER, children: right })] })] }),
+          new D.Paragraph({ indent: { left: -OUT_L, right: -OUT_R }, border: { bottom: { style: D.BorderStyle.THICK, size: 18, color: "000000", space: 1 } }, children: [] }), textPara("")];
       }
-      if (cls.contains("doc-title")) return [...[...el.children].map((c) => para(c, { alignment: D.AlignmentType.CENTER, spacing: { after: 0, line: 360 } }, { bold: true })), textPara("")];
-      if (tag === "P" && cls.contains("fn")) return [para(el, { spacing: { after: 160 } }, { size: 19, italics: true })];
-      if (tag === "P" && cls.contains("cap")) return [para(el, { alignment: D.AlignmentType.CENTER, spacing: { before: 120, after: 120 } }, { bold: true })];
+      // LAPORAN (tebal), baris kosong, TENTANG (biasa), JUDUL KEGIATAN (tebal)
+      if (cls.contains("doc-title")) return [...[...el.children].map((c) => (c.classList.contains("gap") ? textPara("", { spacing: { after: 0, line: 360 } }) : para(c, { alignment: A.CENTER, spacing: { after: 0, line: 360 } }, { bold: c.classList.contains("b") || undefined }))), textPara("")];
+      if (tag === "P" && cls.contains("fn")) return [para(el, { spacing: { after: 160 } }, { size: SZ_T, italics: true })];
+      if (tag === "P" && cls.contains("cap")) {
+        // Keterangan tabel dengan field SEQ supaya Daftar Tabel di Word terisi otomatis
+        const n = el.dataset.n || "1", rest = el.textContent.replace(/^\s*Tabel\s+\d+\s*/, "");
+        return [new D.Paragraph({ style: "Caption", alignment: A.CENTER, keepNext: true, spacing: { before: 120, after: 120 }, children: [new D.TextRun({ text: "Tabel " }), new D.SimpleField("SEQ Tabel \\* ARABIC", n), new D.TextRun({ text: ` ${rest}` })] })];
+      }
       if (tag === "P" && cls.contains("li")) return [para(el, { spacing: { after: 60 } })];
-      if (cls.contains("toc")) return [new D.TableOfContents("Daftar Isi", { hyperlink: true, headingStyleRange: "1-2" })];
-      if (tag === "H1") return [new D.Paragraph({ heading: D.HeadingLevel.HEADING_1, alignment: D.AlignmentType.CENTER, pageBreakBefore: cls.contains("pb"), spacing: { after: 360, line: 360 }, children: runs(el, { bold: true }) })];
-      if (tag === "H2") return [new D.Paragraph({ heading: D.HeadingLevel.HEADING_2, pageBreakBefore: cls.contains("pb"), spacing: { before: 240, after: 120, line: 360 }, children: runs(el, { bold: true }) })];
-      if (tag === "H3") return [new D.Paragraph({ heading: D.HeadingLevel.HEADING_3, spacing: { before: 200, after: 80, line: 360 }, indent: { left: 360 }, children: runs(el, { bold: true }) })];
-      if (cls.contains("note")) return noteLines(el).map(bodyLineEl);
-      if (tag === "OL") return [...el.children].map((li, i) => numbered(i + 1, li.textContent.trim()));
-      if (tag === "P" && cls.contains("sub")) return [para(el, { spacing: { before: 120, after: 120, line: 360 }, indent: { left: 360 } })];
-      if (tag === "P" && cls.contains("para")) return [para(el, { alignment: D.AlignmentType.JUSTIFIED, spacing: BODY, indent: { firstLine: 720 } })];
+      if (cls.contains("toc")) return [el.dataset.toc === "tabel"
+        ? new D.TableOfContents("Daftar Tabel", { hyperlink: true, captionLabelIncludingNumbers: "Tabel" })
+        : new D.TableOfContents("Daftar Isi", { hyperlink: true, headingStyleRange: "1-2" })];
+      if (tag === "H1" && cls.contains("front")) {
+        if (/^LAMPIRAN\b/.test(el.textContent.trim())) st.lamp = true;
+        return [heading(el, D.HeadingLevel.HEADING_1, 0, 0, true, { alignment: A.CENTER, spacing: { before: 0, after: 360, line: 360 }, children: runs(el, { bold: true, size: el.id === "pengesahan" ? 28 : SZ }) })];
+      }
+      if (tag === "H1") return [heading(el, D.HeadingLevel.HEADING_1, 0, 0, true)];
+      if (tag === "H2") return [cls.contains("lamp") ? heading(el, D.HeadingLevel.HEADING_2, 1, 0, true) : heading(el, D.HeadingLevel.HEADING_2, 1, IND, false)];
+      if (tag === "H3") return [heading(el, D.HeadingLevel.HEADING_3, 2, st.lamp ? IND : 2 * IND, false)];
+      if (cls.contains("note")) return noteLines(el).map((s) => bodyLineEl(s, lvOf(el)));
+      if (tag === "OL") return [...el.children].map((li, i) => itemPara(lvOf(el) * IND, `${i + 1}.`, runs(li)));
+      if (tag === "UL" && cls.contains("arrow")) return [...el.children].map((li) => new D.Paragraph({ numbering: { reference: "arrow", level: 0 }, spacing: { after: 0, line: 300 }, children: runs(li) }));
+      if (tag === "P" && cls.contains("lamp-head")) return [para(el, { spacing: { before: 360, after: 60 }, indent: { left: IND }, keepNext: true })];
+      if (tag === "P" && cls.contains("sub")) return [para(el, { spacing: { before: 120, after: 120, line: 360 }, indent: { left: IND } })];
+      if (tag === "P" && cls.contains("para")) return [bodyPara(lvOf(el) * IND, runs(el))];
       if (tag === "P") return [para(el, { spacing: { after: 120 } })];
       if (tag === "TABLE" && cls.contains("kv-plain")) {
+        const cw = [2381, 300, st.tw - 2681];
         return [new D.Table({
-          width: { size: 100, type: D.WidthType.PERCENTAGE }, borders: noBorders, columnWidths: [2381, 300, 5256], layout: D.TableLayoutType.FIXED,
+          width: { size: 100, type: D.WidthType.PERCENTAGE }, borders: noBorders, columnWidths: cw, layout: D.TableLayoutType.FIXED,
           rows: [...el.querySelectorAll("tr")].map((tr) => new D.TableRow({ children: [...tr.children].map((td, i) => new D.TableCell({
-            borders: noBorders, width: { size: [2381, 300, 5256][i], type: D.WidthType.DXA },
-            children: td.innerText.split("\n").map((l) => textPara(l, { spacing: { after: 60 } }))
+            borders: noBorders, width: { size: cw[i], type: D.WidthType.DXA },
+            children: td.innerText.split("\n").map((l) => textPara(l, { spacing: { after: 80 } }))
           })) }))
         }), textPara("")];
       }
       if (tag === "TABLE" && cls.contains("sign")) {
-        const nCol = Math.max(...[...el.querySelectorAll("tr")].map((tr) => [...tr.children].reduce((a, td) => a + td.colSpan, 0)));
-        return [textPara(""), new D.Table({ width: { size: 100, type: D.WidthType.PERCENTAGE }, borders: noBorders, columnWidths: Array.from({ length: nCol }, () => Math.floor(7937 / nCol)), layout: D.TableLayoutType.FIXED,
-          rows: [...el.querySelectorAll("tr")].map((tr) => new D.TableRow({ cantSplit: true, children: [...tr.children].map((td) => signCell(td, Math.floor(7937 / nCol) * td.colSpan)) })) })];
+        // memo: kiri-kanan lalu tengah, rata tengah; close (penutup laporan): teks rata kiri di kolom kanan
+        const close = cls.contains("close"), w0 = Math.round(st.tw * (close ? 0.55 : 0.5)), cw = [w0, st.tw - w0];
+        return [textPara(""), new D.Table({ width: { size: 100, type: D.WidthType.PERCENTAGE }, borders: noBorders, columnWidths: cw, layout: D.TableLayoutType.FIXED,
+          rows: [...el.querySelectorAll("tr")].map((tr, ri) => new D.TableRow({ cantSplit: true, children: [...tr.children].map((td, k) => signCell(td, td.colSpan > 1 ? st.tw : cw[k], close ? A.LEFT : A.CENTER, ri > 0)) })) })];
       }
       if (tag === "TABLE") return [dataTable(el), textPara("")];
-      if (tag === "FIGURE" && cls.contains("map")) return [await imagePara(el.querySelector("img").src, PAGE_W_PX, { maxPx: 1600 }), textPara("")];
+      if (tag === "FIGURE" && cls.contains("map")) return [await imagePara(el.querySelector("img").src, Math.round(st.tw / 15), { maxPx: 1600, maxH: 640 }), textPara("")];
       if (tag === "FIGURE" && cls.contains("scan")) return [await imagePara(el.querySelector("img").src, PAGE_W_PX, { maxPx: 2000, maxH: 760 })];
       if (tag === "DIV" && cls.contains("photos")) return photoTable(el);
       if (tag === "DIV" || tag === "SECTION") {
@@ -296,49 +360,60 @@
       }
       return [];
     }
-    return { D, block, runs, textPara };
+    return { D, st, block, runs, textPara };
   }
 
   function docStyles() {
-    const h = (id, name, extra = {}) => ({ id, name, basedOn: "Normal", next: "Normal", quickFormat: true, run: { font: FONT, size: 24, bold: true, color: "000000" }, ...extra });
+    const h = (id, name, lvl) => ({ id, name, basedOn: "Normal", next: "Normal", quickFormat: true, run: { font: FONT, size: SZ, color: "000000" }, paragraph: { outlineLevel: lvl, keepNext: true } });
     return {
-      default: { document: { run: { font: FONT, size: 24 } } },
-      paragraphStyles: [h("Heading1", "Heading 1"), h("Heading2", "Heading 2"), h("Heading3", "Heading 3")]
+      default: { document: { run: { font: FONT, size: SZ } } },
+      paragraphStyles: [h("Heading1", "Heading 1", 0), h("Heading2", "Heading 2", 1), h("Heading3", "Heading 3", 2),
+        { id: "Caption", name: "caption", basedOn: "Normal", next: "Normal", quickFormat: true, run: { font: FONT, size: SZ, bold: true, color: "000000" } }]
     };
   }
+  const docNumbering = (D) => ({ config: [{ reference: "arrow", levels: [{ level: 0, format: D.LevelFormat.BULLET, text: "", alignment: D.AlignmentType.LEFT,
+    style: { run: { font: "Wingdings" }, paragraph: { indent: { left: 2 * IND, hanging: IND } } } }] }] });
   const PAGE = { size: { width: 11906, height: 16838 }, margin: { top: 1701, bottom: 1701, left: 2268, right: 1701 } };
+  // Halaman mendatar untuk matriks lampiran: sisi jilid (4 cm) di atas
+  const PAGE_L = { size: { width: 11906, height: 16838, orientation: "landscape" }, margin: { top: 2268, bottom: 1701, left: 1701, right: 1701 } };
 
+  // Sampul (tanpa nomor), halaman awal (i, ii, …), isi (1, 2, …); blok .landscape di isi dicetak mendatar dengan nomor halaman berlanjut
   async function docx(reportEl, M, onProgress, opts = {}) {
     const B = makeBuilder(), D = B.D;
-    const sectionsEls = [...reportEl.querySelectorAll(":scope > section")];
-    const front = sectionsEls.find((s) => s.classList.contains("sec-front")), body = sectionsEls.find((s) => s.classList.contains("sec-body"));
-    const cover = front.querySelector(".cover");
-    const conv = async (els, label) => {
+    const secs = [...reportEl.querySelectorAll(":scope > section")];
+    const pick = (c) => secs.find((s) => s.classList.contains(c));
+    const coverEl = pick("sec-cover"), front = pick("sec-front"), body = pick("sec-body");
+    const conv = async (els, label, landscape) => {
+      B.st.tw = landscape ? TW_L : TW_P;
       const out = [];
-      for (let i = 0; i < els.length; i++) { onProgress && onProgress(`Menyusun ${label}… ${Math.round((i / els.length) * 100)}%`); out.push(...(await B.block(els[i]))); }
+      for (let i = 0; i < els.length; i++) {
+        onProgress && onProgress(`Menyusun ${label}… ${Math.round((i / els.length) * 100)}%`);
+        B.st.noPB = i === 0;
+        out.push(...(await B.block(els[i])));
+      }
+      B.st.noPB = false;
       return out;
     };
-    const coverKids = cover ? await conv([cover], "sampul") : null;
-    const frontEls = [...front.children].filter((e) => e !== cover);
-    const frontKids = await conv(frontEls, "pengesahan");
-    if (frontKids[0] && frontEls[0].tagName === "H1") frontKids[0] = B.textPara("LEMBAR PENGESAHAN", { heading: D.HeadingLevel.HEADING_1, alignment: D.AlignmentType.CENTER, spacing: { after: 360 } }, { bold: true });
-    const bodyEls = [...body.children];
-    const bodyKids = await conv(bodyEls, "isi laporan");
-    if (bodyEls[0] && bodyEls[0].tagName === "H1") bodyKids[0] = new D.Paragraph({ heading: D.HeadingLevel.HEADING_1, alignment: D.AlignmentType.CENTER, spacing: { after: 360, line: 360 }, children: B.runs(bodyEls[0], { bold: true }) });
-    const footer = (fmt) => ({ default: new D.Footer({ children: [new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [new D.TextRun({ children: [D.PageNumber.CURRENT] })] })] }) });
+    const footer = () => ({ default: new D.Footer({ children: [new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [new D.TextRun({ children: [D.PageNumber.CURRENT] })] })] }) });
+    const sections = [];
+    if (coverEl) sections.push({ properties: { page: PAGE }, children: await conv([...coverEl.children], "sampul") });
+    if (front) sections.push({ properties: { page: { ...PAGE, pageNumbers: { start: 1, formatType: D.NumberFormat.LOWER_ROMAN } } }, footers: footer(), children: await conv([...front.children], "lembar pengesahan dan daftar isi") });
+    const chunks = [{ land: false, els: [] }];
+    for (const e of body.children) {
+      if (e.classList.contains("landscape")) chunks.push({ land: true, els: [...e.children] }, { land: false, els: [] });
+      else chunks[chunks.length - 1].els.push(e);
+    }
+    let first = true;
+    for (const ch of chunks.filter((c) => c.els.length)) {
+      const kids = await conv(ch.els, ch.land ? "lampiran" : "isi laporan", ch.land);
+      sections.push({ properties: { page: { ...(ch.land ? PAGE_L : PAGE), pageNumbers: first ? { start: 1, formatType: D.NumberFormat.DECIMAL } : { formatType: D.NumberFormat.DECIMAL } } }, footers: footer(), children: kids });
+      first = false;
+    }
     const doc = new D.Document({
-      creator: "Generator LPK SMART Patrol", title: opts.title || `Laporan ${M.patrol.id}`, styles: docStyles(), features: { updateFields: true },
-      // Tanpa sampul (format kop + LAPORAN/TENTANG): halaman bernomor urut sejak halaman pertama
-      sections: cover ? [
-        { properties: { page: PAGE }, children: coverKids },
-        { properties: { page: { ...PAGE, pageNumbers: { start: 1, formatType: D.NumberFormat.LOWER_ROMAN } } }, footers: footer(), children: frontKids },
-        { properties: { page: { ...PAGE, pageNumbers: { start: 1, formatType: D.NumberFormat.DECIMAL } } }, footers: footer(), children: bodyKids }
-      ] : [
-        { properties: { page: { ...PAGE, pageNumbers: { start: 1, formatType: D.NumberFormat.DECIMAL } } }, footers: footer(), children: frontKids },
-        { properties: { page: { ...PAGE, pageNumbers: { formatType: D.NumberFormat.DECIMAL } } }, footers: footer(), children: bodyKids }
-      ]
+      creator: "Generator LPK & RPK SMART Patrol", title: opts.title || `Laporan ${M.patrol.id}`, styles: docStyles(), numbering: docNumbering(D), features: { updateFields: true }, sections
     });
     const blob = await D.Packer.toBlob(doc);
+    if (opts.returnBlob) return blob;
     download(blob, opts.fileName || `LPK_${safeName(M.patrol.id)}.docx`);
   }
 

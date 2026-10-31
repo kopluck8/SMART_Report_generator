@@ -7,11 +7,16 @@
   const R = window.SRGReport, esc = R.esc;
 
   /* ---------- Tabel isian baris ---------- */
-  // cols: [{k, label, w, num}]; rows diubah langsung; onChange dipanggil setiap ketikan
+  // cols: [{k, label, w, num, type: "date"|"number"|"select", opts, list}]; rows diubah langsung; onChange dipanggil setiap ketikan
+  const cellHtml = (c, r, i) => {
+    const v = r[c.k] ?? "", a = `data-r="${i}" data-k="${c.k}" aria-label="${esc(c.label)}"`;
+    if (c.type === "select") return `<select ${a}><option value=""></option>${c.opts.map((o) => `<option${o === v ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+    return `<input ${a} value="${esc(v)}"${c.type === "date" ? ' type="date"' : c.type === "number" ? ' type="number" min="0"' : ""}${c.num ? ' inputmode="numeric"' : ""}${c.list ? ` list="${c.list}"` : ""}>`;
+  };
   function rowsEditor(el, cols, getRows, onChange, footer) {
     const render = () => {
       const rows = getRows();
-      el.innerHTML = `<table><thead><tr>${cols.map((c) => `<th>${esc(c.label)}</th>`).join("")}<th></th></tr></thead><tbody>${rows.map((r, i) => `<tr>${cols.map((c) => `<td${c.w ? ` style="width:${c.w}"` : ""}><input data-r="${i}" data-k="${c.k}" value="${esc(r[c.k] ?? "")}"${c.num ? ' inputmode="numeric"' : ""}></td>`).join("")}<td style="width:22px"><button type="button" class="btn link" data-rdel="${i}" aria-label="Hapus baris">×</button></td></tr>`).join("")}</tbody></table>${footer ? `<p class="fixed" data-foot></p>` : ""}`;
+      el.innerHTML = `<table><thead><tr>${cols.map((c) => `<th>${esc(c.label)}</th>`).join("")}<th></th></tr></thead><tbody>${rows.map((r, i) => `<tr>${cols.map((c) => `<td${c.w ? ` style="width:${c.w}"` : ""}>${cellHtml(c, r, i)}</td>`).join("")}<td style="width:22px"><button type="button" class="btn link" data-rdel="${i}" aria-label="Hapus baris">×</button></td></tr>`).join("")}</tbody></table>${footer ? `<p class="fixed" data-foot></p>` : ""}`;
       foot();
     };
     const foot = () => { const f = el.querySelector("[data-foot]"); if (f && footer) f.innerHTML = footer(getRows()); };
@@ -59,10 +64,11 @@
     return list.map((p, i) => ({ ...p, rank: i })).filter((p) => !exclude.includes(p.nip) && words.every((w) => alias(norm(`${p.nama} ${p.nip} ${p.jabatan}`)).includes(w))).slice(0, 10);
   }
   const pickItem = (p) => `<button type="button" class="pick" data-nip="${esc(p.nip)}"><b>${esc(p.nama)}</b><small>${esc(R.fmtNip(p.nip) || "-")} · ${esc(p.jabatan || "-")}</small></button>`;
-  function bindPicker(input, box, getList, onPick, exclude) {
+  // onManual(teks): bila nama tidak ada di daftar pegawai, tawarkan isian manual dengan nama yang sudah diketik
+  function bindPicker(input, box, getList, onPick, exclude, onManual) {
     const show = () => {
-      const res = search(getList(), input.value, exclude());
-      box.innerHTML = input.value.trim() ? (res.map(pickItem).join("") || `<p class="muted">Tidak ada pegawai yang cocok.</p>`) : "";
+      const q = input.value.trim(), res = search(getList(), input.value, exclude());
+      box.innerHTML = q ? (res.map(pickItem).join("") || `<p class="muted">Tidak ada di daftar pegawai.</p>`) + (onManual ? `<button type="button" class="pick manual-pick" data-manual><b>Isi manual: ${esc(q)}</b><small>Untuk petugas di luar daftar pegawai (Polri, TNI, MMP, MPA, masyarakat, atau pegawai baru)</small></button>` : "") : "";
     };
     input.addEventListener("input", show);
     input.addEventListener("keydown", (e) => {
@@ -71,9 +77,60 @@
     });
     box.addEventListener("click", (e) => {
       const b = e.target.closest(".pick"); if (!b) return;
+      if (b.hasAttribute("data-manual")) { const q = input.value.trim(); input.value = ""; show(); onManual(q); return; }
       const p = getList().find((x) => x.nip === b.dataset.nip); if (!p) return;
       onPick(p); input.value = ""; show(); input.focus();
     });
+  }
+
+  /* ---------- Peran dalam tim ---------- */
+  const peranSelect = (val, attrs) => `<select ${attrs}>${R.PERAN.map((p) => `<option${p.k === val ? " selected" : ""}>${esc(p.k)}</option>`).join("")}</select>`;
+
+  /* ---------- Isian lapangan (pilihan baku, tanpa mengetik narasi) ---------- */
+  // fields dari SRGReport.faktaShown; nilai disimpan di objek getFacts(); onChange(segera) dipanggil setiap perubahan
+  function factsForm(el, getFacts, onChange) {
+    let sig = "";
+    const NONE = /^tidak ada\b/i;
+    el.addEventListener("input", (e) => {
+      const t = e.target.closest("[data-fact]"); if (!t) return;
+      const f = getFacts(), k = t.dataset.fact;
+      if (t.type === "checkbox") {
+        const boxes = [...el.querySelectorAll(`[data-fact="${k}"]`)];
+        // "tidak ada …" tidak digabung dengan pilihan lain
+        if (t.checked) boxes.forEach((b) => { if (b !== t && NONE.test(b.value) !== NONE.test(t.value)) b.checked = false; });
+        f[k] = boxes.filter((b) => b.checked).map((b) => b.value);
+      } else f[k] = t.value;
+      onChange(t.type === "checkbox" || t.tagName === "SELECT");
+    });
+    el.addEventListener("click", (e) => {
+      if (!e.target.closest("[data-kadd]")) return;
+      const f = getFacts(); (f.kamera || (f.kamera = [])).push({ kode: "", pasang: "", unduh: "", foto: "", satwa: "", kondisi: "" });
+      sig = ""; render(last.fields, last.ctx, true); onChange(true);
+    });
+    let last = { fields: [], ctx: {} };
+    function render(fields, ctx, force) {
+      last = { fields, ctx };
+      const s = JSON.stringify(fields.map((x) => [x.k, R.faktaOpts(x, ctx), !!(x.req && x.req(ctx))]));
+      if (s === sig && !force) return;
+      sig = s;
+      const f = getFacts();
+      const lbl = (x) => `${esc(x.label)}${x.req && x.req(ctx) ? ' <b class="warn">wajib</b>' : ""}`;
+      el.innerHTML = fields.length ? fields.map((x) => {
+        const v = f[x.k], opts = R.faktaOpts(x, ctx);
+        if (x.type === "pilih") return `<label class="fld">${lbl(x)}<select data-fact="${x.k}"><option value="">(tidak ditulis di laporan)</option>${opts.map((o) => `<option${o === v ? " selected" : ""}>${esc(o)}</option>`).join("")}</select></label>`;
+        if (x.type === "multi") return `<fieldset class="fld ckset"><legend>${lbl(x)}</legend>${opts.map((o) => `<label class="ck"><input type="checkbox" data-fact="${x.k}" value="${esc(o)}"${(v || []).includes(o) ? " checked" : ""}> <span>${esc(o)}</span></label>`).join("")}</fieldset>`;
+        if (x.type === "angka") return `<label class="fld">${lbl(x)}<input type="number" min="0" step="any" data-fact="${x.k}" value="${esc(v ?? "")}"></label>`;
+        if (x.type === "tanggal") return `<label class="fld">${lbl(x)}<input type="date" data-fact="${x.k}" value="${esc(v ?? "")}"></label>`;
+        if (x.type === "kamera") return `<div class="fld">${lbl(x)}<div class="rab-ed" data-kamera></div><div class="btnrow"><button type="button" class="btn small ghost" data-kadd>Tambah kamera</button></div></div>`;
+        return "";
+      }).join("") : `<p class="muted">Tidak ada isian tambahan untuk kegiatan ini.</p>`;
+      const kd = el.querySelector("[data-kamera]");
+      if (kd) {
+        if (!(f.kamera || []).length) f.kamera = [{ kode: "", pasang: "", unduh: "", foto: "", satwa: "", kondisi: "" }];
+        rowsEditor(kd, R.KAMERA_COLS, () => getFacts().kamera, onChange).render();
+      }
+    }
+    return { render, reset() { sig = ""; } };
   }
 
   /* ---------- Scan Surat Tugas ---------- */
@@ -141,5 +198,5 @@
     };
   }
 
-  window.SRGUI = { bindJudul, alatUntouched, rowsEditor, RAB_COLS, ALAT_COLS, rabFooter, unsurSelect, search, bindPicker, scanBox };
+  window.SRGUI = { bindJudul, alatUntouched, rowsEditor, RAB_COLS, ALAT_COLS, rabFooter, unsurSelect, peranSelect, factsForm, search, bindPicker, scanBox };
 })();

@@ -4,16 +4,29 @@ Aplikasi web statis (tanpa server) yang mengubah file ekspor patroli **SMART Des
 
 ## Isi laporan
 
-LPK dan RPK memakai susunan yang sama (sesuai catatan koreksi LPK ST.1336), tanpa sampul dan tanpa format BAB:
+LPK dan RPK mengikuti **Memorandum M.57/T.41/TU/PEG/02/2026** tentang tertib administrasi pelaporan (Lampiran 3 lembar pengesahan, Lampiran 4 format laporan kegiatan keteknisan) dan catatan koreksi LPK ST.1336. Susunan dokumen:
 
-- **Halaman pertama**: kop Balai, judul "LAPORAN / TENTANG / Pelaksanaan Kegiatan …" (RPK: "RENCANA PELAKSANAAN KEGIATAN / TENTANG / …"), ringkasan (judul, nomor ST, waktu, lokasi, pelaksana per unsur, jumlah dan sumber anggaran), lalu tanda tangan (LPK: Kepala Subbagian Tata Usaha, Ketua Tim, Kepala Balai; RPK: PPK, Koordinator, Kepala Balai).
-- **A. Pendahuluan**: latar belakang, maksud dan tujuan (tujuan pencegahan karhutla bila ada temuan api), ruang lingkup, dasar (dasar hukum, MoU TNI/Polri bila tim memuat unsur itu, DIPA, Surat Tugas).
-- **B. Pelaksanaan Kegiatan** (RPK: Rencana Pelaksanaan): keadaan lokasi; waktu (LPK membedakan waktu kerja sesuai ST dengan sesi perekaman SMART, jarak darat dan drone dipisah); alat dan bahan (tabel jenis dan jumlah); metode pengumpulan dan analisis data; tim pelaksana dikelompokkan per unsur (Balai/NIP, Polri/NRP, TNI/NRP, MMP-MPA-masyarakat/NIK); anggaran (rincian per MAK, total, terbilang) dan tata waktu.
-- **C. Hasil dan Pembahasan** (LPK): per kategori dengan foto dan tabel koordinat; membedakan jumlah catatan dan titik koordinat unik, menandai catatan ganda (tidak dihapus), dan menjelaskan "Belum ada di daftar aplikasi".
-- **D. Simpulan dan Saran**, **E. Penutup** (RPK: **C. Penutup**).
-- **Lampiran**: LPK A peta, B dokumentasi, C keanekaragaman hayati, D scan Surat Tugas; RPK A peta grid rencana, B scan Surat Tugas.
+- **Sampul**: jenis dokumen, judul lengkap, logo, "OLEH: TIM PELAKSANA KEGIATAN", nomor ST, periode, tempat dan bulan (tanpa nomor halaman).
+- **Lembar pengesahan** (bernomor i): kop, ringkasan (judul, waktu, lokasi, pelaksana per unsur, jumlah dan sumber anggaran, disusun di, tanggal, oleh), lalu tanda tangan. LPK: Menyetujui Kepala Subbagian Tata Usaha dan Tim Pelaksana, Mengetahui Kepala Balai. RPK: Diperiksa dan Disetujui PPK, Koordinator Kegiatan, Mengesahkan Kepala Balai. Nama tidak ditebalkan atau digarisbawahi.
+- **Daftar Isi** dan **Daftar Tabel** (ii, iii). Di Word keduanya berupa field yang terisi nomor halaman saat dokumen dibuka (pilih **Yes** ketika Word menanyakan pembaruan field).
+- **Isi** (bernomor 1, 2, …): kop, "LAPORAN / TENTANG / judul" (RPK: "RENCANA PELAKSANAAN KEGIATAN / TENTANG / judul"), lalu:
+  1. **Pendahuluan**: a. Umum, b. Maksud dan Tujuan, c. Ruang Lingkup, d. Dasar.
+  2. **Kegiatan yang dilaksanakan** (RPK: yang akan dilaksanakan): a. Keadaan Umum Lokasi Kegiatan, b. Waktu Pelaksanaan, c. Alat dan Bahan, d. Metode Pelaksanaan/Pengumpulan Data, e. Metode Analisis Data, f. Tim Pelaksana (per unsur, dengan peran masing-masing), g. Rincian Anggaran dan Biaya, h. Tata Waktu/Jadwal Pelaksanaan.
+  3. **Hasil yang dicapai** (LPK): a. Hasil per kategori dengan tabel ringkasan, b. Pembahasan.
+  4. **Simpulan dan saran** (LPK).
+  5. **Penutup** (RPK: 3. Penutup), blok tanda tangan pembuat laporan, dan daftar LAMPIRAN dengan tanda panah.
+- **Lampiran** LPK: 1. Surat Tugas, 2. Matriks Data Hasil Kegiatan, 3. Matriks Analisis Data, 4. Peta Kerja/Peta Hasil Kegiatan, 5. Dokumentasi Kegiatan. Lampiran 2 dan 3 dicetak mendatar (lanskap). RPK: 1. Surat Tugas, 2. Peta Kerja.
 
-Narasi dibuat otomatis dan bisa diedit. Bagian yang harus dilengkapi manual ditandai `[ … ]` (disorot kuning) dan muncul di panel **Kesiapan data laporan**, bersama cek konsistensi jumlah, catatan ganda, unsur anggota, rincian anggaran, dan scan ST. Nama ilmiah otomatis dicetak miring; ejaan baku (imbauan, pembaruan, penggembalaan, s.d.) dirapikan.
+Format mengikuti contoh Memorandum: Arial 12 pt (tabel, keterangan gambar, dan catatan kaki 11 pt), margin 4-3-3-3 cm, kop dengan logo di kiri, judul bagian bernomor menggantung, paragraf menjorok 1 cm. Nomor tabel memakai field SEQ sehingga Daftar Tabel ikut terisi. Nama ilmiah dicetak miring; label SMART tiga bagian ditulis "Nama lokal/Nama lokal (*Genus species*)" di narasi.
+
+## Mengurangi ketik manual
+
+- **Wilayah kerja**: pilih SPTN Wilayah I Kore, SPTN Wilayah II Pekat, atau salah satu dari tujuh resor (2026). Pilihan "Otomatis" menebak wilayah dari titik patroli (LPK) atau grid rencana (RPK) dengan batas resor 2026. Bagian Umum dan Keadaan Umum Lokasi Kegiatan (luas, desa binaan, kantor, akses, potensi, ancaman) disusun dari profil wilayah yang dipilih.
+- **Profil kawasan, SPTN, dan resor** berasal dari Satu Data Tambora (Kajian Wilayah Kerja Resor 2026). Aplikasi mencoba membaca kajian terbaru dari situs Satu Data saat dibuka; bila gagal dipakai salinan di `js/profil.js`.
+- **Isian lapangan** (LPK langkah 3): kondisi cuaca, kendala, pelaku dan tindakan terhadap aktivitas manusia, faktor kerawanan, peran mitra/aparat, dugaan tindak pidana, tindak lanjut, dan data kamera jebak diisi dengan pilihan, centang, angka, atau tanggal. Isian yang dikosongkan tidak ditulis di narasi. Pertanyaan yang muncul menyesuaikan judul kegiatan dan temuan.
+- **Peran anggota** (Ketua Tim, Navigator, Pencatat Data SMART, Pengamanan, Pemandu Lapangan, dll.) dipilih dari daftar; uraian tugas tiap peran ditulis otomatis.
+- **Petugas di luar daftar pegawai** (Polri, TNI, MMP, MPA, masyarakat, atau pegawai baru): ketik nama di kotak pencarian lalu pilih **Isi manual**; pangkat dan jabatan punya daftar usulan.
+- Narasi tetap bisa diedit langsung di pratinjau. Panel **Kesiapan data laporan** menandai isian yang belum lengkap; centang "Narasi sudah diperiksa" setelah membaca teks.
 
 Ekspor: **PDF** (Cetak), **Word .docx**, isi template Word sendiri, CSV temuan, KML, GeoJSON.
 
@@ -22,8 +35,9 @@ Ekspor: **PDF** (Cetak), **Word .docx**, isi template Word sendiri, CSV temuan, 
 - **Judul baku kegiatan** (7 pilihan, sama untuk LPK dan RPK): SMART Patrol bersama MMP/MPA/Pokmas/masyarakat; identifikasi gangguan karhutla dan potensi kawasan; pemasangan dan unduh data kamera jebak; bersama TNI/Polri; patroli pencegahan kebakaran bersama masyarakat (reguler dan PNBP PKH); patroli pencegahan/pengendalian bersama TNI/Polri/masyarakat (BB). Latar belakang, maksud, tujuan, ruang lingkup, metode, analisis, pembahasan, saran, dan alat bawaan menyesuaikan judul. Judul yang diketik sendiri dicocokkan dengan kata kunci; mandat patroli juga dicocokkan. Daftar dan teksnya ada di `KEGIATAN` dalam `js/report.js`.
 - **Anggaran**: akun dan rincian per MAK (jenis, volume, satuan, harga). LPK memakai rincian terakhir dari RPK sebagai awal, lalu disimpan per patroli.
 - **Alat dan bahan**: tabel jenis, jumlah, satuan.
-- **Tim**: setiap anggota punya unsur (Balai, Polri, TNI, MMP, MPA, masyarakat). Unsur ditebak dari pangkat (Bripka, Serda, dst.) dan bisa diganti. Di LPK, anggota yang ikut tetapi tidak tercatat di SMART bisa ditambahkan.
-- **Dasar**: satu daftar di Profil, dipakai LPK dan RPK. Profil lama otomatis diperbarui (PP 34/2002 diganti PP 23/2021).
+- **Tim**: setiap anggota punya unsur (Balai, Polri, TNI, MMP, MPA, masyarakat) dan peran. Unsur ditebak dari pangkat (Bripka, Serda, dst.) dan bisa diganti. Di LPK, anggota yang ikut tetapi tidak tercatat di SMART bisa ditambahkan.
+- **Dasar**: satu daftar di Profil, dipakai LPK dan RPK.
+- **Penandatangan**: Kepala Balai dan Kasubbag TU diambil dari daftar pegawai. Di Profil bisa diganti (mis. pejabat Plt./Plh.), termasuk sebutan jabatan TU, alamat, dan kontak di kop.
 - **Scan Surat Tugas** JPG/PNG/PDF (pdf.js 3.11.174 dari cdnjs, dimuat hanya saat dibutuhkan).
 - Word disimpan sebagai `LPK_<nomor ST>.docx` dan `RPK_<nomor ST>.docx`.
 
@@ -32,15 +46,17 @@ Ekspor: **PDF** (Cetak), **Word .docx**, isi template Word sendiri, CSV temuan, 
 | Data | Di mana diisi | Keterangan |
 | --- | --- | --- |
 | Ekspor patroli SMART (.zip) | Langkah 1 | Patrol → Export, sertakan attachments. Judul kegiatan diambil dari mandat patroli |
-| Nomor dan tanggal ST, tanggal pelaksanaan sesuai ST, tempat dan tanggal penandatanganan | Langkah 2 | Diisi oleh pembuat laporan, disimpan per ID patroli di browser |
-| Rincian anggaran, alat dan bahan, scan Surat Tugas | Langkah 3 (LPK) / form RPK | Disimpan di browser; LPK per ID patroli |
-| Anggota di luar daftar pegawai | Langkah 2 | Muncul otomatis; isi nama, NIP/NRP/NIK, pangkat, jabatan, unsur sekali saja |
+| Nomor dan tanggal ST, tanggal pelaksanaan sesuai ST, wilayah kerja, tempat dan tanggal penandatanganan | Langkah 2 | Diisi oleh pembuat laporan, disimpan per ID patroli di browser |
+| Isian lapangan (pilihan) | Langkah 3 (LPK) | Disimpan per ID patroli |
+| Rincian anggaran, alat dan bahan, scan Surat Tugas | Langkah 4 (LPK) / form RPK | Disimpan di browser; LPK per ID patroli |
+| Anggota di luar daftar pegawai | Langkah 2 | Isi nama, NIP/NRP/NIK, pangkat, jabatan, unsur sekali saja |
 | DIPA (nomor, tanggal, sumber anggaran) | Bawaan, tetap | `data/dipa.json` per tahun anggaran |
 | Daftar pegawai | Bawaan | `data/pegawai.xlsx`, urutan baris = urutan kepangkatan (dipakai untuk urutan tabel tim). Kolom: Nama, NIP (teks 18 digit), Jabatan, Pangkat/Gol. Kepala Balai dan Kasubbag TU dikenali dari kolom Jabatan |
-| Data Model SMART | Bawaan | Muat ulang di Langkah 5 bila Data Model berubah |
+| Profil kawasan dan wilayah kerja | Bawaan | `data/kajian_resor_2026.json` dan `data/batas_resor_2026.geojson` (salinan Satu Data Tambora), ditanam ke `js/profil.js` dengan `python3 tools/build_profil.py` |
+| Data Model SMART | Bawaan | Muat ulang di Langkah 6 bila Data Model berubah |
 | Logo dan lapisan peta | Bawaan | `img/logo-tntambora.png` dan `data/*.geojson` |
 
-Semua data bawaan ditanam ke `js/defaults.js` dengan `python3 tools/build_defaults.py`. Jalankan ulang setelah mengganti daftar pegawai, DIPA tahun baru, logo, atau lapisan peta.
+Semua data bawaan lain ditanam ke `js/defaults.js` dengan `python3 tools/build_defaults.py`. Jalankan ulang setelah mengganti daftar pegawai, DIPA tahun baru, logo, atau lapisan peta. Setelah kajian resor di Satu Data diperbarui, salin ulang kedua filenya ke `data/` lalu jalankan `python3 tools/build_profil.py`.
 
 ## Pasang di GitHub Pages
 
@@ -79,11 +95,13 @@ Label tambahan di luar Data Model (atribut patroli seperti sumber anggaran) ada 
 | `js/defaults.js` | Logo dan lapisan peta bawaan (dibuat oleh `tools/build_defaults.py`) |
 | `js/dictionary.js` | Kamus label dari Data Model Balai TN Tambora (dibuat oleh `tools/build_dictionary.py`) |
 | `js/report.js` | Model laporan, grid/zonasi dari lapisan, narasi otomatis, kesiapan data, HTML LPK |
+| `js/profil.js` | Profil kawasan, SPTN, resor, dan batas resor 2026 (dibuat oleh `tools/build_profil.py`) |
+| `js/wilayah.js` | Pilihan wilayah kerja, tebakan wilayah dari titik/grid, narasi Umum dan Keadaan Umum Lokasi |
 | `js/map.js` | Peta statis (canvas) dengan lapisan grid/zonasi |
 | `js/export.js` | Word .docx, isi template, CSV, KML, GeoJSON |
 | `js/app.js` | Antarmuka LPK, profil, penyimpanan browser |
 | `js/rpk.js` | Model, narasi, kesiapan data, dan HTML RPK |
-| `js/ui.js` | Komponen form bersama: tabel RAB/alat, pilihan unsur, pencarian pegawai, scan Surat Tugas |
+| `js/ui.js` | Komponen form bersama: tabel RAB/alat, pilihan unsur dan peran, pencarian pegawai dengan isian manual, isian lapangan, scan Surat Tugas |
 | `js/rpk-app.js` | Tab RPK: form, tim, peta grid |
 
 Pustaka dari CDN: JSZip 3.10.1, docx 8.5.0, shpjs 4.0.4, pdf.js 3.11.174 (khusus scan PDF Surat Tugas).
